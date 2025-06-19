@@ -1,18 +1,32 @@
 env: "dev"
 
+grpc_server:
+  address: "0.0.0.0"
+  port: 50055
+
+
 kafka:
-  brokers:
-    - kafka:9092
-  group_id: notification-group
-  topics:
-    - user-notifications
-    - post-notifications
+  brokers: "kafka1:9092,kafka2:9092,kafka3:9092"
+  acks: "all"
+  retries: 3
+  retry_backoff_ms: 500
+  delivery_timeout_ms: 5000
+  queue_buffering_max_messages: 100000
+  queue_buffering_max_ms: 5
+  compression_type: "snappy"
+  batch_size: 16384
+  linger_ms: 5
+  relation_topic: "relation-events"
+
+event_types:
+  follow_created: "follow_created"
+  follow_deleted: "follow_deleted"
 
 database:
   username: "postgres"
   password: "admin"
   host: "notification-db"
-  port: "5435"
+  port: "5436"
   db_name: "notificationservice"
   migrations_path: "./migrations"
 
