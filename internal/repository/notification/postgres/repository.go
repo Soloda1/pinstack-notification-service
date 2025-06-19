@@ -1,1 +1,1 @@
-package postgres
+package notification_repository_postgres
