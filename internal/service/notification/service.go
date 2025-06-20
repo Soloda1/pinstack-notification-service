@@ -123,3 +123,48 @@ func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (int, error)
 
 	return count, nil
 }
+
+func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, error) {
+	if userID <= 0 {
+		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
+		return nil, custom_errors.ErrInvalidInput
+	}
+
+	if limit <= 0 {
+		s.log.Debug("Using default limit for notifications feed", slog.Int("limit", limit))
+		limit = 10
+	}
+
+	if page <= 0 {
+		s.log.Debug("Using first page for notifications feed", slog.Int("page", page))
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+
+	s.log.Info("Retrieving user notification feed",
+		slog.Int64("user_id", userID),
+		slog.Int("limit", limit),
+		slog.Int("page", page),
+		slog.Int("offset", offset),
+	)
+
+	notifications, err := s.notificationRepo.ListByUser(ctx, userID, limit, offset)
+	if err != nil {
+		s.log.Error("Failed to retrieve notification feed",
+			slog.Int64("user_id", userID),
+			slog.Int("limit", limit),
+			slog.Int("page", page),
+			slog.String("error", err.Error()),
+		)
+		return nil, err
+	}
+
+	s.log.Info("User notification feed retrieved",
+		slog.Int64("user_id", userID),
+		slog.Int("count", len(notifications)),
+		slog.Int("page", page),
+	)
+
+	return notifications, nil
+}
