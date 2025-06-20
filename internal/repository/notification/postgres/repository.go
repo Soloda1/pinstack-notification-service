@@ -298,3 +298,43 @@ func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID int64
 
 	return nil
 }
+
+func (r *NotificationRepository) Delete(ctx context.Context, id int64) error {
+	query := `
+		DELETE FROM notifications
+		WHERE id = @id
+	`
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+
+	r.log.Debug("Deleting notification", slog.Int64("id", id))
+
+	result, err := r.db.Exec(ctx, query, args)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to delete notification",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("id", id),
+			)
+
+			return custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to delete notification", slog.String("error", err.Error()))
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		r.log.Debug("Notification not found", slog.Int64("id", id))
+		return custom_errors.ErrPostNotFound
+	}
+
+	r.log.Debug("Notification deleted successfully", slog.Int64("id", id))
+	return nil
+}
