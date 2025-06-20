@@ -44,18 +44,18 @@ func (h *GetNotificationDetailsHandler) Handle(ctx context.Context, req *pb.GetN
 	}
 
 	if err := validate.Struct(validationReq); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
+		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
 	notification, err := h.notificationService.GetNotificationDetails(ctx, req.GetNotificationId())
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
-			return nil, status.Error(codes.InvalidArgument, "invalid notification ID")
+			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrNotificationNotFound):
-			return nil, status.Error(codes.NotFound, "notification not found")
+			return nil, status.Error(codes.NotFound, custom_errors.ErrNotificationNotFound.Error())
 		default:
-			return nil, status.Errorf(codes.Internal, "failed to get notification details: %v", err)
+			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
 
