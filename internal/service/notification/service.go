@@ -168,3 +168,29 @@ func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, lim
 
 	return notifications, nil
 }
+
+func (s *Service) ReadNotification(ctx context.Context, id int64) error {
+	if id <= 0 {
+		s.log.Error("Invalid notification ID", slog.Int64("id", id))
+		return custom_errors.ErrInvalidInput
+	}
+
+	s.log.Info("Reading notification", slog.Int64("id", id))
+
+	err := s.notificationRepo.MarkAsRead(ctx, id)
+	if err != nil {
+		if errors.Is(err, custom_errors.ErrNotificationNotFound) {
+			s.log.Debug("Notification not found", slog.Int64("id", id))
+			return custom_errors.ErrNotificationNotFound
+		}
+
+		s.log.Error("Failed to read notification",
+			slog.Int64("id", id),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	s.log.Info("Notification marked as read", slog.Int64("id", id))
+	return nil
+}
