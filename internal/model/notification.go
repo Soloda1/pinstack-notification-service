@@ -1,10 +1,21 @@
 package model
 
+import (
+	"encoding/json"
+	"time"
+)
+
 type Notification struct {
-	ID        string                 `json:"id"`
-	UserID    string                 `json:"user_id"`
-	Type      string                 `json:"type"`
-	Data      map[string]interface{} `json:"data"`
-	CreatedAt int64                  `json:"created_at"`
-	Read      bool                   `json:"read"`
+	ID        int64           `json:"id" db:"id"`
+	UserID    int64           `json:"user_id" db:"user_id"`
+	Type      string          `json:"type" db:"type"`
+	IsRead    bool            `json:"is_read" db:"is_read"`
+	CreatedAt time.Time       `json:"created_at" db:"created_at"`
+	Payload   json.RawMessage `json:"payload,omitempty" db:"payload"`
 }
+
+type NotificationType string
+
+const (
+	NotificationTypeRelation NotificationType = "relation"
+)
