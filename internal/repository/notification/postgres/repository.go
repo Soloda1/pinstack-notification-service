@@ -92,3 +92,52 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 
 	return nil
 }
+
+func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.Notification, error) {
+	query := `
+		SELECT id, user_id, type, is_read, created_at, payload 
+		FROM notifications 
+		WHERE id = $1
+	`
+
+	r.log.Debug("Getting notification by ID", slog.Int64("id", id))
+
+	var notification model.Notification
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&notification.ID,
+		&notification.UserID,
+		&notification.Type,
+		&notification.IsRead,
+		&notification.CreatedAt,
+		&notification.Payload,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			r.log.Debug("Notification not found", slog.Int64("id", id))
+			return nil, custom_errors.ErrPostNotFound
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to get notification",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("id", id),
+			)
+
+			return nil, custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to get notification", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	r.log.Debug("Notification retrieved successfully",
+		slog.Int64("id", notification.ID),
+		slog.Int64("user_id", notification.UserID),
+	)
+
+	return &notification, nil
+}
