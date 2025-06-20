@@ -258,3 +258,43 @@ func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error
 	r.log.Debug("Notification marked as read successfully", slog.Int64("id", id))
 	return nil
 }
+
+func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID int64) error {
+	query := `
+		UPDATE notifications
+		SET is_read = true
+		WHERE user_id = @user_id AND is_read = false
+	`
+
+	args := pgx.NamedArgs{
+		"user_id": userID,
+	}
+
+	r.log.Debug("Marking all notifications as read for user", slog.Int64("user_id", userID))
+
+	result, err := r.db.Exec(ctx, query, args)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to mark all notifications as read",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("user_id", userID),
+			)
+
+			return custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to mark all notifications as read", slog.String("error", err.Error()))
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	r.log.Debug("Notifications marked as read successfully",
+		slog.Int64("user_id", userID),
+		slog.Int64("count", rowsAffected),
+	)
+
+	return nil
+}
