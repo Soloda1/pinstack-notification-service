@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"log/slog"
-	"pinstack-relation-service/internal/logger"
+	"pinstack-notification-service/internal/logger"
 )
 
 func UnaryLoggerInterceptor(log *logger.Logger) grpc.UnaryServerInterceptor {
