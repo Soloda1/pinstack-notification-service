@@ -2,6 +2,7 @@ package producer
 
 import (
 	"context"
+	"log/slog"
 	"pinstack-notification-service/config"
 	"pinstack-notification-service/internal/logger"
 )
@@ -19,7 +20,7 @@ func NewNotificationProducer(cfg config.KafkaConfig, log *logger.Logger) *Notifi
 }
 
 func (p *NotificationProducer) Send(ctx context.Context, topic string, message []byte) error {
-	p.log.Debug("Sending message to topic: %s", topic)
+	p.log.Debug("Sending message to Kafka topic", slog.String("topic", topic))
 	// TODO: Реализовать логику отправки в Kafka
 	return nil
 }

@@ -19,6 +19,6 @@ func NewNotificationConsumer(cfg config.KafkaConfig, log *logger.Logger) *Notifi
 }
 
 func (c *NotificationConsumer) Start(ctx context.Context) {
-	c.log.Info("Starting Kafka consumer for topics: %v", c.config.Topics)
+	c.log.Info("Starting Kafka consumer")
 	// TODO: Реализовать логику чтения сообщений из Kafka
 }
