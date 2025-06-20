@@ -100,6 +100,11 @@ var (
 	ErrPostNotFound = errors.New("post not found")
 )
 
+// Ошибки уведомлений
+var (
+	ErrNotificationNotFound = errors.New("notification not found")
+)
+
 // Ошибки тегов
 var (
 	ErrTagsNotFound        = errors.New("tags not found")

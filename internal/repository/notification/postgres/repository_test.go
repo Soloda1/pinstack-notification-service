@@ -282,7 +282,7 @@ func TestNotificationRepository_GetByID(t *testing.T) {
 			},
 			want:        nil,
 			wantErr:     true,
-			expectedErr: custom_errors.ErrPostNotFound,
+			expectedErr: custom_errors.ErrNotificationNotFound,
 		},
 		{
 			name: "database error",
@@ -562,7 +562,7 @@ func TestNotificationRepository_MarkAsRead(t *testing.T) {
 					mock.Anything).Return(createEmptyCommandTag(), nil)
 			},
 			wantErr:     true,
-			expectedErr: custom_errors.ErrPostNotFound,
+			expectedErr: custom_errors.ErrNotificationNotFound,
 		},
 		{
 			name: "database error",
@@ -609,7 +609,7 @@ func TestNotificationRepository_MarkAsRead(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.expectedErr != nil {
-					if errors.Is(err, custom_errors.ErrPostNotFound) || errors.Is(err, custom_errors.ErrDatabaseQuery) {
+					if errors.Is(err, custom_errors.ErrNotificationNotFound) || errors.Is(err, custom_errors.ErrDatabaseQuery) {
 						assert.ErrorIs(t, err, tt.expectedErr)
 					}
 				}
@@ -737,7 +737,7 @@ func TestNotificationRepository_Delete(t *testing.T) {
 					mock.Anything).Return(createEmptyCommandTag(), nil)
 			},
 			wantErr:     true,
-			expectedErr: custom_errors.ErrPostNotFound,
+			expectedErr: custom_errors.ErrNotificationNotFound,
 		},
 		{
 			name: "database error",
@@ -784,7 +784,7 @@ func TestNotificationRepository_Delete(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.expectedErr != nil {
-					if errors.Is(err, custom_errors.ErrPostNotFound) || errors.Is(err, custom_errors.ErrDatabaseQuery) {
+					if errors.Is(err, custom_errors.ErrNotificationNotFound) || errors.Is(err, custom_errors.ErrDatabaseQuery) {
 						assert.ErrorIs(t, err, tt.expectedErr)
 					}
 				}

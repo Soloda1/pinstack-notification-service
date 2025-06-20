@@ -118,7 +118,7 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			r.log.Debug("Notification not found", slog.Int64("id", id))
-			return nil, custom_errors.ErrPostNotFound
+			return nil, custom_errors.ErrNotificationNotFound
 		}
 
 		var pgErr *pgconn.PgError
@@ -251,7 +251,7 @@ func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		r.log.Debug("Notification not found", slog.Int64("id", id))
-		return custom_errors.ErrPostNotFound
+		return custom_errors.ErrNotificationNotFound
 	}
 
 	r.log.Debug("Notification marked as read successfully", slog.Int64("id", id))
@@ -331,7 +331,7 @@ func (r *NotificationRepository) Delete(ctx context.Context, id int64) error {
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		r.log.Debug("Notification not found", slog.Int64("id", id))
-		return custom_errors.ErrPostNotFound
+		return custom_errors.ErrNotificationNotFound
 	}
 
 	r.log.Debug("Notification deleted successfully", slog.Int64("id", id))
