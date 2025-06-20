@@ -37,11 +37,14 @@ type GetUnreadCountRequestInternal struct {
 }
 
 func (h *GetUnreadCountHandler) Handle(ctx context.Context, req *pb.GetUnreadCountRequest) (*pb.GetUnreadCountResponse, error) {
+	h.log.Info("Processing get unread count request", "user_id", req.GetUserId())
+
 	validationReq := &GetUnreadCountRequestInternal{
 		UserID: req.GetUserId(),
 	}
 
 	if err := validate.Struct(validationReq); err != nil {
+		h.log.Error("Validation failed for get unread count request", "user_id", req.GetUserId(), "error", err)
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
@@ -49,13 +52,18 @@ func (h *GetUnreadCountHandler) Handle(ctx context.Context, req *pb.GetUnreadCou
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
+			h.log.Error("Invalid input for get unread count", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrUserNotFound):
+			h.log.Error("User not found", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.NotFound, custom_errors.ErrUserNotFound.Error())
 		default:
+			h.log.Error("Internal service error while getting unread count", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
+
+	h.log.Info("Successfully retrieved unread count", "user_id", req.GetUserId(), "count", count)
 
 	return &pb.GetUnreadCountResponse{
 		Count: int32(count),

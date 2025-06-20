@@ -41,6 +41,11 @@ type UserNotificationFeedRequestInternal struct {
 }
 
 func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.GetUserNotificationFeedRequest) (*pb.GetUserNotificationFeedResponse, error) {
+	h.log.Info("Processing get user notification feed request",
+		"user_id", req.GetUserId(),
+		"limit", req.GetLimit(),
+		"page", req.GetPage())
+
 	validationReq := &UserNotificationFeedRequestInternal{
 		UserID: req.GetUserId(),
 		Limit:  int(req.GetLimit()),
@@ -48,6 +53,11 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 	}
 
 	if err := validate.Struct(validationReq); err != nil {
+		h.log.Error("Validation failed for user notification feed request",
+			"user_id", req.GetUserId(),
+			"limit", req.GetLimit(),
+			"page", req.GetPage(),
+			"error", err)
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
@@ -55,10 +65,23 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
+			h.log.Error("Invalid input for get user notification feed",
+				"user_id", req.GetUserId(),
+				"limit", req.GetLimit(),
+				"page", req.GetPage(),
+				"error", err)
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrUserNotFound):
+			h.log.Error("User not found for notification feed request",
+				"user_id", req.GetUserId(),
+				"error", err)
 			return nil, status.Error(codes.NotFound, custom_errors.ErrUserNotFound.Error())
 		default:
+			h.log.Error("Internal service error while getting user notification feed",
+				"user_id", req.GetUserId(),
+				"limit", req.GetLimit(),
+				"page", req.GetPage(),
+				"error", err)
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
@@ -77,6 +100,10 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 			Payload:   notification.Payload,
 		})
 	}
+
+	h.log.Info("Successfully retrieved user notification feed",
+		"user_id", req.GetUserId(),
+		"notifications_count", len(notifications))
 
 	return response, nil
 }

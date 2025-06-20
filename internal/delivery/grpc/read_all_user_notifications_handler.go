@@ -38,11 +38,14 @@ type ReadAllUserNotificationsRequestInternal struct {
 }
 
 func (h *ReadAllUserNotificationsHandler) Handle(ctx context.Context, req *pb.ReadAllUserNotificationsRequest) (*emptypb.Empty, error) {
+	h.log.Info("Processing read all user notifications request", "user_id", req.GetUserId())
+
 	validationReq := &ReadAllUserNotificationsRequestInternal{
 		UserID: req.GetUserId(),
 	}
 
 	if err := validate.Struct(validationReq); err != nil {
+		h.log.Error("Validation failed for read all user notifications request", "user_id", req.GetUserId(), "error", err)
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
@@ -50,13 +53,17 @@ func (h *ReadAllUserNotificationsHandler) Handle(ctx context.Context, req *pb.Re
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
+			h.log.Error("Invalid input for read all user notifications", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrUserNotFound):
+			h.log.Error("User not found for read all notifications request", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.NotFound, custom_errors.ErrUserNotFound.Error())
 		default:
+			h.log.Error("Internal service error while reading all user notifications", "user_id", req.GetUserId(), "error", err)
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
 
+	h.log.Info("Successfully marked all notifications as read", "user_id", req.GetUserId())
 	return &emptypb.Empty{}, nil
 }
