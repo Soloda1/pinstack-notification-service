@@ -217,3 +217,44 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 
 	return notifications, nil
 }
+
+func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error {
+	query := `
+		UPDATE notifications
+		SET is_read = true
+		WHERE id = @id
+	`
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+
+	r.log.Debug("Marking notification as read", slog.Int64("id", id))
+
+	result, err := r.db.Exec(ctx, query, args)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to mark notification as read",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("id", id),
+			)
+
+			return custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to mark notification as read", slog.String("error", err.Error()))
+		return err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		r.log.Debug("Notification not found", slog.Int64("id", id))
+		return custom_errors.ErrPostNotFound
+	}
+
+	r.log.Debug("Notification marked as read successfully", slog.Int64("id", id))
+	return nil
+}
