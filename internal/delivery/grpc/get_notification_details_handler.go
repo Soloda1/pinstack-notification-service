@@ -1,0 +1,70 @@
+package notification_grpc
+
+import (
+	"context"
+	"errors"
+	"pinstack-notification-service/internal/model"
+
+	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"pinstack-notification-service/internal/custom_errors"
+	"pinstack-notification-service/internal/logger"
+	notification_service "pinstack-notification-service/internal/service/notification"
+)
+
+type NotificationDetailsGetter interface {
+	GetNotificationDetails(ctx context.Context, id int64) (*model.Notification, error)
+}
+
+type GetNotificationDetailsHandler struct {
+	notificationService NotificationDetailsGetter
+	log                 *logger.Logger
+}
+
+func NewGetNotificationDetailsHandler(
+	notificationService notification_service.NotificationService,
+	log *logger.Logger,
+) *GetNotificationDetailsHandler {
+	return &GetNotificationDetailsHandler{
+		notificationService: notificationService,
+		log:                 log,
+	}
+}
+
+type NotificationDetailsRequestInternal struct {
+	NotificationID int64 `validate:"required,gt=0"`
+}
+
+func (h *GetNotificationDetailsHandler) Handle(ctx context.Context, req *pb.GetNotificationDetailsRequest) (*pb.NotificationResponse, error) {
+	validationReq := &NotificationDetailsRequestInternal{
+		NotificationID: req.GetNotificationId(),
+	}
+
+	if err := validate.Struct(validationReq); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
+	}
+
+	notification, err := h.notificationService.GetNotificationDetails(ctx, req.GetNotificationId())
+	if err != nil {
+		switch {
+		case errors.Is(err, custom_errors.ErrInvalidInput):
+			return nil, status.Error(codes.InvalidArgument, "invalid notification ID")
+		case errors.Is(err, custom_errors.ErrNotificationNotFound):
+			return nil, status.Error(codes.NotFound, "notification not found")
+		default:
+			return nil, status.Errorf(codes.Internal, "failed to get notification details: %v", err)
+		}
+	}
+
+	return &pb.NotificationResponse{
+		Id:        notification.ID,
+		UserId:    notification.UserID,
+		Type:      notification.Type,
+		IsRead:    notification.IsRead,
+		CreatedAt: timestamppb.New(notification.CreatedAt),
+		Payload:   notification.Payload,
+	}, nil
+}
