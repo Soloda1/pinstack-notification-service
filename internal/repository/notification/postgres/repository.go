@@ -337,3 +337,43 @@ func (r *NotificationRepository) Delete(ctx context.Context, id int64) error {
 	r.log.Debug("Notification deleted successfully", slog.Int64("id", id))
 	return nil
 }
+
+func (r *NotificationRepository) CountUnread(ctx context.Context, userID int64) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM notifications
+		WHERE user_id = @user_id AND is_read = false
+	`
+
+	args := pgx.NamedArgs{
+		"user_id": userID,
+	}
+
+	r.log.Debug("Counting unread notifications for user", slog.Int64("user_id", userID))
+
+	var count int
+	err := r.db.QueryRow(ctx, query, args).Scan(&count)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to count unread notifications",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("user_id", userID),
+			)
+
+			return 0, custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to count unread notifications", slog.String("error", err.Error()))
+		return 0, err
+	}
+
+	r.log.Debug("Counted unread notifications successfully",
+		slog.Int64("user_id", userID),
+		slog.Int("count", count),
+	)
+
+	return count, nil
+}
