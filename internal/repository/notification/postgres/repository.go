@@ -97,13 +97,17 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	query := `
 		SELECT id, user_id, type, is_read, created_at, payload 
 		FROM notifications 
-		WHERE id = $1
+		WHERE id = @id
 	`
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
 
 	r.log.Debug("Getting notification by ID", slog.Int64("id", id))
 
 	var notification model.Notification
-	err := r.db.QueryRow(ctx, query, id).Scan(
+	err := r.db.QueryRow(ctx, query, args).Scan(
 		&notification.ID,
 		&notification.UserID,
 		&notification.Type,
@@ -140,4 +144,76 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	)
 
 	return &notification, nil
+}
+
+func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, error) {
+	query := `
+		SELECT id, user_id, type, is_read, created_at, payload 
+		FROM notifications 
+		WHERE user_id = @user_id
+		ORDER BY created_at DESC
+		LIMIT @limit OFFSET @offset
+	`
+
+	args := pgx.NamedArgs{
+		"user_id": userID,
+		"limit":   limit,
+		"offset":  offset,
+	}
+
+	r.log.Debug("Listing notifications by user",
+		slog.Int64("user_id", userID),
+		slog.Int("limit", limit),
+		slog.Int("offset", offset),
+	)
+
+	rows, err := r.db.Query(ctx, query, args)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to list notifications",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("user_id", userID),
+			)
+
+			return nil, custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to list notifications", slog.String("error", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	notifications := make([]*model.Notification, 0)
+	for rows.Next() {
+		var notification model.Notification
+		err := rows.Scan(
+			&notification.ID,
+			&notification.UserID,
+			&notification.Type,
+			&notification.IsRead,
+			&notification.CreatedAt,
+			&notification.Payload,
+		)
+		if err != nil {
+			r.log.Error("Failed to scan notification row", slog.String("error", err.Error()))
+			return nil, custom_errors.ErrDatabaseScan
+		}
+
+		notifications = append(notifications, &notification)
+	}
+
+	if err := rows.Err(); err != nil {
+		r.log.Error("Error during rows iteration", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	r.log.Debug("Retrieved notifications successfully",
+		slog.Int64("user_id", userID),
+		slog.Int("count", len(notifications)),
+	)
+
+	return notifications, nil
 }
