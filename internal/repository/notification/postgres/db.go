@@ -1,4 +1,4 @@
-package db
+package notification_repository_postgres
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+//go:generate mockery --name=PgDB --output=../../../../mocks --outpkg=mocks --case=underscore
 type PgDB interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row

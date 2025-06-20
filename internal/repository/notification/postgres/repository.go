@@ -10,16 +10,15 @@ import (
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
-	"pinstack-notification-service/internal/repository/db"
 	"time"
 )
 
 type NotificationRepository struct {
 	log *logger.Logger
-	db  db.PgDB
+	db  PgDB
 }
 
-func NewNotificationRepository(db db.PgDB, log *logger.Logger) *NotificationRepository {
+func NewNotificationRepository(db PgDB, log *logger.Logger) *NotificationRepository {
 	return &NotificationRepository{db: db, log: log}
 }
 
