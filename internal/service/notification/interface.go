@@ -5,6 +5,7 @@ import (
 	"pinstack-notification-service/internal/model"
 )
 
+//go:generate mockery --name=NotificationService --output=../../../mocks --outpkg=mocks --case=underscore --with-expecter
 type NotificationService interface {
 	SendNotification(ctx context.Context, notification *model.Notification) error
 	GetNotificationDetails(ctx context.Context, id int64) (*model.Notification, error)
