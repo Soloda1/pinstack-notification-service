@@ -194,3 +194,24 @@ func (s *Service) ReadNotification(ctx context.Context, id int64) error {
 	s.log.Info("Notification marked as read", slog.Int64("id", id))
 	return nil
 }
+
+func (s *Service) ReadAllUserNotifications(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
+		return custom_errors.ErrInvalidInput
+	}
+
+	s.log.Info("Reading all notifications for user", slog.Int64("user_id", userID))
+
+	err := s.notificationRepo.MarkAllAsRead(ctx, userID)
+	if err != nil {
+		s.log.Error("Failed to mark all notifications as read",
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	s.log.Info("All user notifications marked as read", slog.Int64("user_id", userID))
+	return nil
+}
