@@ -71,16 +71,31 @@ func main() {
 	log.Info("Shutting down services...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	_ = shutdownCtx
 	defer cancel()
+
+	kafkaShutdownDone := make(chan bool, 1)
+	go func() {
+		kafkaConsumer.Close()
+		kafkaShutdownDone <- true
+	}()
 
 	if err := grpcServer.Shutdown(); err != nil {
 		log.Error("gRPC server shutdown error", slog.String("error", err.Error()))
 	}
 
-	<-done
+	select {
+	case <-done:
+		log.Info("gRPC server shutdown complete")
+	case <-shutdownCtx.Done():
+		log.Error("gRPC server shutdown timeout exceeded", slog.String("error", shutdownCtx.Err().Error()))
+	}
 
-	kafkaConsumer.Close()
+	select {
+	case <-kafkaShutdownDone:
+		log.Info("Kafka consumer shutdown complete")
+	case <-shutdownCtx.Done():
+		log.Error("Kafka consumer shutdown timeout exceeded", slog.String("error", shutdownCtx.Err().Error()))
+	}
 
 	log.Info("Server exiting")
 }
