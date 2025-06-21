@@ -30,7 +30,6 @@ func NewNotificationConsumer(cfg config.KafkaConfig, log *logger.Logger, notific
 		"enable.auto.commit":      cfg.EnableAutoCommit,
 		"auto.commit.interval.ms": cfg.AutoCommitIntervalMs,
 		"session.timeout.ms":      cfg.SessionTimeoutMs,
-		"max.poll.records":        cfg.MaxPollRecords,
 		"max.poll.interval.ms":    cfg.MaxPollIntervalMs,
 	})
 

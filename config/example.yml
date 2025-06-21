@@ -22,7 +22,6 @@ kafka:
   enable_auto_commit: true
   auto_commit_interval_ms: 5000
   session_timeout_ms: 10000
-  max_poll_records: 500
   max_poll_interval_ms: 300000
 
 event_types:

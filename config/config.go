@@ -24,7 +24,6 @@ type KafkaConfig struct {
 	EnableAutoCommit      bool   `yaml:"enable_auto_commit"`
 	AutoCommitIntervalMs  int    `yaml:"auto_commit_interval_ms"`
 	SessionTimeoutMs      int    `yaml:"session_timeout_ms"`
-	MaxPollRecords        int    `yaml:"max_poll_records"`
 	MaxPollIntervalMs     int    `yaml:"max_poll_interval_ms"`
 }
 
@@ -85,7 +84,6 @@ func MustLoad() *Config {
 	viper.SetDefault("kafka.enable_auto_commit", true)
 	viper.SetDefault("kafka.auto_commit_interval_ms", 5000)
 	viper.SetDefault("kafka.session_timeout_ms", 10000)
-	viper.SetDefault("kafka.max_poll_records", 500)
 	viper.SetDefault("kafka.max_poll_interval_ms", 300000)
 
 	// Event Types defaults
@@ -129,7 +127,6 @@ func MustLoad() *Config {
 			EnableAutoCommit:     viper.GetBool("kafka.enable_auto_commit"),
 			AutoCommitIntervalMs: viper.GetInt("kafka.auto_commit_interval_ms"),
 			SessionTimeoutMs:     viper.GetInt("kafka.session_timeout_ms"),
-			MaxPollRecords:       viper.GetInt("kafka.max_poll_records"),
 			MaxPollIntervalMs:    viper.GetInt("kafka.max_poll_interval_ms"),
 		},
 		Database: Database{
