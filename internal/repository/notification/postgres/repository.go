@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/soloda1/pinstack-proto-definitions/events"
 	"log/slog"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
@@ -30,7 +31,7 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 
 	args := pgx.NamedArgs{
 		"user_id":    notif.UserID,
-		"type":       notif.Type,
+		"type":       string(notif.Type),
 		"is_read":    notif.IsRead,
 		"created_at": createdAt,
 		"payload":    notif.Payload,
@@ -54,18 +55,20 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 
 	r.log.Debug("Creating notification",
 		slog.Int64("user_id", notif.UserID),
-		slog.String("type", notif.Type),
+		slog.String("type", string(notif.Type)),
 	)
 
 	var createdNotification model.Notification
+	var typeStr string
 	err := r.db.QueryRow(ctx, query, args).Scan(
 		&createdNotification.ID,
 		&createdNotification.UserID,
-		&createdNotification.Type,
+		&typeStr,
 		&createdNotification.IsRead,
 		&createdNotification.CreatedAt,
 		&createdNotification.Payload,
 	)
+	createdNotification.Type = events.EventType(typeStr)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -106,14 +109,16 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	r.log.Debug("Getting notification by ID", slog.Int64("id", id))
 
 	var notification model.Notification
+	var typeStr string
 	err := r.db.QueryRow(ctx, query, args).Scan(
 		&notification.ID,
 		&notification.UserID,
-		&notification.Type,
+		&typeStr,
 		&notification.IsRead,
 		&notification.CreatedAt,
 		&notification.Payload,
 	)
+	notification.Type = events.EventType(typeStr)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -188,14 +193,17 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 	notifications := make([]*model.Notification, 0)
 	for rows.Next() {
 		var notification model.Notification
+		var typeStr string
 		err := rows.Scan(
 			&notification.ID,
 			&notification.UserID,
-			&notification.Type,
+			&typeStr,
 			&notification.IsRead,
 			&notification.CreatedAt,
 			&notification.Payload,
 		)
+		notification.Type = events.EventType(typeStr)
+
 		if err != nil {
 			r.log.Error("Failed to scan notification row", slog.String("error", err.Error()))
 			return nil, custom_errors.ErrDatabaseScan

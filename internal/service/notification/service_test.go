@@ -93,7 +93,7 @@ func TestService_SendNotification(t *testing.T) {
 			tt.mockSetup(mockRepo)
 
 			service := notification_service.NewNotificationService(log, mockRepo)
-			err := service.SendNotification(context.Background(), tt.notification)
+			err := service.SaveNotification(context.Background(), tt.notification)
 
 			if tt.wantErr {
 				assert.Error(t, err)

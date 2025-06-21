@@ -39,7 +39,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				Payload: payload,
 			},
 			mockSetup: func(mockService *mocks.NotificationService) {
-				mockService.On("SendNotification", mock.Anything, mock.MatchedBy(func(n *model.Notification) bool {
+				mockService.On("SaveNotification", mock.Anything, mock.MatchedBy(func(n *model.Notification) bool {
 					return n.UserID == 1 && n.Type == "test_notification" && string(n.Payload) == string(payload)
 				})).Run(func(args mock.Arguments) {
 					notification := args.Get(1).(*model.Notification)
@@ -93,7 +93,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				Payload: payload,
 			},
 			mockSetup: func(mockService *mocks.NotificationService) {
-				mockService.On("SendNotification", mock.Anything, mock.MatchedBy(func(n *model.Notification) bool {
+				mockService.On("SaveNotification", mock.Anything, mock.MatchedBy(func(n *model.Notification) bool {
 					return n.UserID == 999 && n.Type == "test_notification" && string(n.Payload) == string(payload)
 				})).Return(custom_errors.ErrUserNotFound)
 			},
@@ -108,7 +108,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				Type:    "test_notification",
 				Payload: payload,
 			},
-			mockSetup:      func(mockService *mocks.NotificationService) {}, // не ожидаем вызова SendNotification
+			mockSetup:      func(mockService *mocks.NotificationService) {}, // не ожидаем вызова SaveNotification
 			wantErr:        true,
 			expectedCode:   codes.InvalidArgument,
 			expectedErrMsg: "validation failed",
@@ -121,7 +121,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				Payload: payload,
 			},
 			mockSetup: func(mockService *mocks.NotificationService) {
-				mockService.On("SendNotification", mock.Anything, mock.Anything).Return(errors.New("database error"))
+				mockService.On("SaveNotification", mock.Anything, mock.Anything).Return(errors.New("database error"))
 			},
 			wantErr:        true,
 			expectedCode:   codes.Internal,

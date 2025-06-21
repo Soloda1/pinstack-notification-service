@@ -19,6 +19,12 @@ type KafkaConfig struct {
 	BatchSize             int    `yaml:"batch_size"`
 	LingerMs              int    `yaml:"linger_ms"`
 	RelationTopic         string `yaml:"relation_topic"`
+	ConsumerGroupID       string `yaml:"consumer_group_id"`
+	AutoOffsetReset       string `yaml:"auto_offset_reset"`
+	EnableAutoCommit      bool   `yaml:"enable_auto_commit"`
+	AutoCommitIntervalMs  int    `yaml:"auto_commit_interval_ms"`
+	SessionTimeoutMs      int    `yaml:"session_timeout_ms"`
+	MaxPollIntervalMs     int    `yaml:"max_poll_interval_ms"`
 }
 
 type GrpcServerConfig struct {
@@ -72,6 +78,14 @@ func MustLoad() *Config {
 	viper.SetDefault("kafka.linger_ms", 5)
 	viper.SetDefault("kafka.relation_topic", "relation-events")
 
+	// Kafka consumer defaults
+	viper.SetDefault("kafka.consumer_group_id", "notification-service")
+	viper.SetDefault("kafka.auto_offset_reset", "earliest")
+	viper.SetDefault("kafka.enable_auto_commit", true)
+	viper.SetDefault("kafka.auto_commit_interval_ms", 5000)
+	viper.SetDefault("kafka.session_timeout_ms", 10000)
+	viper.SetDefault("kafka.max_poll_interval_ms", 300000)
+
 	// Event Types defaults
 	viper.SetDefault("event_types.follow_created", "follow_created")
 	viper.SetDefault("event_types.follow_deleted", "follow_deleted")
@@ -107,6 +121,13 @@ func MustLoad() *Config {
 			BatchSize:             viper.GetInt("kafka.batch_size"),
 			LingerMs:              viper.GetInt("kafka.linger_ms"),
 			RelationTopic:         viper.GetString("kafka.relation_topic"),
+
+			ConsumerGroupID:      viper.GetString("kafka.consumer_group_id"),
+			AutoOffsetReset:      viper.GetString("kafka.auto_offset_reset"),
+			EnableAutoCommit:     viper.GetBool("kafka.enable_auto_commit"),
+			AutoCommitIntervalMs: viper.GetInt("kafka.auto_commit_interval_ms"),
+			SessionTimeoutMs:     viper.GetInt("kafka.session_timeout_ms"),
+			MaxPollIntervalMs:    viper.GetInt("kafka.max_poll_interval_ms"),
 		},
 		Database: Database{
 			Username:       viper.GetString("database.username"),

@@ -61,7 +61,7 @@ func TestGetUserNotificationFeed_Success(t *testing.T) {
 	require.NotNil(t, resp)
 	assert.Equal(t, 2, len(resp.Notifications))
 	assert.Equal(t, notifications[0].ID, resp.Notifications[0].Id)
-	assert.Equal(t, notifications[0].Type, resp.Notifications[0].Type)
+	assert.Equal(t, string(notifications[0].Type), resp.Notifications[0].Type)
 
 	mockService.AssertExpectations(t)
 }
