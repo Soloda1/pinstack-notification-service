@@ -59,14 +59,16 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 	)
 
 	var createdNotification model.Notification
+	var typeStr string
 	err := r.db.QueryRow(ctx, query, args).Scan(
 		&createdNotification.ID,
 		&createdNotification.UserID,
-		&createdNotification.Type,
+		&typeStr,
 		&createdNotification.IsRead,
 		&createdNotification.CreatedAt,
 		&createdNotification.Payload,
 	)
+	createdNotification.Type = events.EventType(typeStr)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
