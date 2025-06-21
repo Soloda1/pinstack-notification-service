@@ -44,8 +44,8 @@ type UserNotificationFeedRequestInternal struct {
 func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.GetUserNotificationFeedRequest) (*pb.GetUserNotificationFeedResponse, error) {
 	h.log.Info("Processing get user notification feed request",
 		slog.Int64("user_id", req.GetUserId()),
-		slog.Int32("limit", req.GetLimit()),
-		slog.Int32("page", req.GetPage()))
+		slog.Int("limit", int(req.GetLimit())),
+		slog.Int("page", int(req.GetPage())))
 
 	validationReq := &UserNotificationFeedRequestInternal{
 		UserID: req.GetUserId(),
@@ -56,8 +56,8 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 	if err := validate.Struct(validationReq); err != nil {
 		h.log.Error("Validation failed for user notification feed request",
 			slog.Int64("user_id", req.GetUserId()),
-			slog.Int32("limit", req.GetLimit()),
-			slog.Int32("page", req.GetPage()),
+			slog.Int("limit", int(req.GetLimit())),
+			slog.Int("page", int(req.GetPage())),
 			slog.String("error", err.Error()))
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
@@ -68,8 +68,8 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 		case errors.Is(err, custom_errors.ErrInvalidInput):
 			h.log.Error("Invalid input for get user notification feed",
 				slog.Int64("user_id", req.GetUserId()),
-				slog.Int32("limit", req.GetLimit()),
-				slog.Int32("page", req.GetPage()),
+				slog.Int("limit", int(req.GetLimit())),
+				slog.Int("page", int(req.GetPage())),
 				slog.String("error", err.Error()))
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrUserNotFound):
@@ -80,8 +80,8 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 		default:
 			h.log.Error("Internal service error while getting user notification feed",
 				slog.Int64("user_id", req.GetUserId()),
-				slog.Int32("limit", req.GetLimit()),
-				slog.Int32("page", req.GetPage()),
+				slog.Int("limit", int(req.GetLimit())),
+				slog.Int("page", int(req.GetPage())),
 				slog.String("error", err.Error()))
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
