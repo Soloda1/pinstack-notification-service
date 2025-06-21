@@ -117,27 +117,23 @@ func (c *NotificationConsumer) processMessage(ctx context.Context, msg *kafka.Me
 		return custom_errors.ErrInvalidInput
 	}
 
-	var event struct {
-		EventType string          `json:"event_type"`
-		Payload   json.RawMessage `json:"payload"`
-	}
-
-	if err := json.Unmarshal(msg.Value, &event); err != nil {
-		c.log.Error("Failed to unmarshal Kafka message",
-			slog.String("message", string(msg.Value)),
-			slog.String("error", err.Error()))
-		return custom_errors.ErrInvalidInput
+	var eventType string
+	for _, header := range msg.Headers {
+		if header.Key == "event_type" {
+			eventType = string(header.Value)
+			break
+		}
 	}
 
 	c.log.Info("Received event from Kafka",
-		slog.String("event_type", event.EventType),
-		slog.String("payload", string(event.Payload)))
+		slog.String("event_type", eventType),
+		slog.String("payload", string(msg.Value)))
 
-	switch event.EventType {
+	switch eventType {
 	case string(events.EventTypeFollowCreated):
-		return c.handleFollowCreated(ctx, event.Payload)
+		return c.handleFollowCreated(ctx, msg.Value)
 	default:
-		c.log.Warn("Unknown event type", slog.String("event_type", event.EventType))
+		c.log.Warn("Unknown event type", slog.String("event_type", eventType))
 		return custom_errors.ErrInvalidInput
 	}
 }
