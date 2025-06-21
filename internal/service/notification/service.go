@@ -23,7 +23,7 @@ func NewNotificationService(log *logger.Logger, notificationRepo notification_re
 	}
 }
 
-func (s *Service) SendNotification(ctx context.Context, notification *model.Notification) error {
+func (s *Service) SaveNotification(ctx context.Context, notification *model.Notification) error {
 	if notification == nil {
 		s.log.Error("Notification is nil")
 		return custom_errors.ErrInvalidInput

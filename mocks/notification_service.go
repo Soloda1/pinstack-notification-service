@@ -341,11 +341,11 @@ func (_c *NotificationService_RemoveNotification_Call) RunAndReturn(run func(con
 }
 
 // SendNotification provides a mock function with given fields: ctx, notification
-func (_m *NotificationService) SendNotification(ctx context.Context, notification *model.Notification) error {
+func (_m *NotificationService) SaveNotification(ctx context.Context, notification *model.Notification) error {
 	ret := _m.Called(ctx, notification)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SendNotification")
+		panic("no return value specified for SaveNotification")
 	}
 
 	var r0 error
@@ -358,7 +358,7 @@ func (_m *NotificationService) SendNotification(ctx context.Context, notificatio
 	return r0
 }
 
-// NotificationService_SendNotification_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendNotification'
+// NotificationService_SendNotification_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveNotification'
 type NotificationService_SendNotification_Call struct {
 	*mock.Call
 }
@@ -367,7 +367,7 @@ type NotificationService_SendNotification_Call struct {
 //   - ctx context.Context
 //   - notification *model.Notification
 func (_e *NotificationService_Expecter) SendNotification(ctx interface{}, notification interface{}) *NotificationService_SendNotification_Call {
-	return &NotificationService_SendNotification_Call{Call: _e.mock.On("SendNotification", ctx, notification)}
+	return &NotificationService_SendNotification_Call{Call: _e.mock.On("SaveNotification", ctx, notification)}
 }
 
 func (_c *NotificationService_SendNotification_Call) Run(run func(ctx context.Context, notification *model.Notification)) *NotificationService_SendNotification_Call {
