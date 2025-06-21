@@ -70,7 +70,7 @@ func (h *GetNotificationDetailsHandler) Handle(ctx context.Context, req *pb.GetN
 	return &pb.NotificationResponse{
 		Id:        notification.ID,
 		UserId:    notification.UserID,
-		Type:      notification.Type,
+		Type:      string(notification.Type),
 		IsRead:    notification.IsRead,
 		CreatedAt: timestamppb.New(notification.CreatedAt),
 		Payload:   notification.Payload,

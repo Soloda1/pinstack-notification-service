@@ -94,7 +94,7 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 		response.Notifications = append(response.Notifications, &pb.NotificationResponse{
 			Id:        notification.ID,
 			UserId:    notification.UserID,
-			Type:      notification.Type,
+			Type:      string(notification.Type),
 			IsRead:    notification.IsRead,
 			CreatedAt: timestamppb.New(notification.CreatedAt),
 			Payload:   notification.Payload,

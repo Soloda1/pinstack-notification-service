@@ -52,7 +52,7 @@ func setupMockNotificationRows(t *testing.T, notifications []model.Notification)
 
 				*idArg = notif.ID
 				*userIDArg = notif.UserID
-				*typeArg = notif.Type
+				*typeArg = string(notif.Type)
 				*isReadArg = notif.IsRead
 				*createdAtArg = notif.CreatedAt
 				*payloadArg = notif.Payload

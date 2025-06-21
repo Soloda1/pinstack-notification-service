@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/events"
 	"pinstack-notification-service/internal/model"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
@@ -15,7 +16,7 @@ import (
 )
 
 type NotificationSender interface {
-	SendNotification(ctx context.Context, notification *model.Notification) error
+	SaveNotification(ctx context.Context, notification *model.Notification) error
 }
 
 type SendNotificationHandler struct {
@@ -61,12 +62,12 @@ func (h *SendNotificationHandler) Handle(ctx context.Context, req *pb.SendNotifi
 
 	notification := &model.Notification{
 		UserID:  req.GetUserId(),
-		Type:    req.GetType(),
+		Type:    events.EventType(req.GetType()),
 		IsRead:  false,
 		Payload: req.GetPayload(),
 	}
 
-	err := h.notificationService.SendNotification(ctx, notification)
+	err := h.notificationService.SaveNotification(ctx, notification)
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
