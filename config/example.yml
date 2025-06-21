@@ -17,6 +17,13 @@ kafka:
   batch_size: 16384
   linger_ms: 5
   relation_topic: "relation-events"
+  consumer_group_id: "notification-service"
+  auto_offset_reset: "earliest"
+  enable_auto_commit: true
+  auto_commit_interval_ms: 5000
+  session_timeout_ms: 10000
+  max_poll_records: 500
+  max_poll_interval_ms: 300000
 
 event_types:
   follow_created: "follow_created"
@@ -29,4 +36,3 @@ database:
   port: "5436"
   db_name: "notificationservice"
   migrations_path: "./migrations"
-
