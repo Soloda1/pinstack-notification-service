@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"pinstack-notification-service/internal/model"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
@@ -42,9 +43,9 @@ type UserNotificationFeedRequestInternal struct {
 
 func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.GetUserNotificationFeedRequest) (*pb.GetUserNotificationFeedResponse, error) {
 	h.log.Info("Processing get user notification feed request",
-		"user_id", req.GetUserId(),
-		"limit", req.GetLimit(),
-		"page", req.GetPage())
+		slog.Int64("user_id", req.GetUserId()),
+		slog.Int32("limit", req.GetLimit()),
+		slog.Int32("page", req.GetPage()))
 
 	validationReq := &UserNotificationFeedRequestInternal{
 		UserID: req.GetUserId(),
@@ -54,10 +55,10 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 
 	if err := validate.Struct(validationReq); err != nil {
 		h.log.Error("Validation failed for user notification feed request",
-			"user_id", req.GetUserId(),
-			"limit", req.GetLimit(),
-			"page", req.GetPage(),
-			"error", err)
+			slog.Int64("user_id", req.GetUserId()),
+			slog.Int32("limit", req.GetLimit()),
+			slog.Int32("page", req.GetPage()),
+			slog.String("error", err.Error()))
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
@@ -66,22 +67,22 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
 			h.log.Error("Invalid input for get user notification feed",
-				"user_id", req.GetUserId(),
-				"limit", req.GetLimit(),
-				"page", req.GetPage(),
-				"error", err)
+				slog.Int64("user_id", req.GetUserId()),
+				slog.Int32("limit", req.GetLimit()),
+				slog.Int32("page", req.GetPage()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrUserNotFound):
 			h.log.Error("User not found for notification feed request",
-				"user_id", req.GetUserId(),
-				"error", err)
+				slog.Int64("user_id", req.GetUserId()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.NotFound, custom_errors.ErrUserNotFound.Error())
 		default:
 			h.log.Error("Internal service error while getting user notification feed",
-				"user_id", req.GetUserId(),
-				"limit", req.GetLimit(),
-				"page", req.GetPage(),
-				"error", err)
+				slog.Int64("user_id", req.GetUserId()),
+				slog.Int32("limit", req.GetLimit()),
+				slog.Int32("page", req.GetPage()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
@@ -102,8 +103,8 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 	}
 
 	h.log.Info("Successfully retrieved user notification feed",
-		"user_id", req.GetUserId(),
-		"notifications_count", len(notifications))
+		slog.Int64("user_id", req.GetUserId()),
+		slog.Int("notifications_count", len(notifications)))
 
 	return response, nil
 }

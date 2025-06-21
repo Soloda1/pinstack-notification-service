@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
 	"google.golang.org/grpc/codes"
@@ -38,14 +39,16 @@ type ReadNotificationRequestInternal struct {
 }
 
 func (h *ReadNotificationHandler) Handle(ctx context.Context, req *pb.ReadNotificationRequest) (*emptypb.Empty, error) {
-	h.log.Info("Processing read notification request", "notification_id", req.GetNotificationId())
+	h.log.Info("Processing read notification request", slog.Int64("notification_id", req.GetNotificationId()))
 
 	validationReq := &ReadNotificationRequestInternal{
 		NotificationID: req.GetNotificationId(),
 	}
 
 	if err := validate.Struct(validationReq); err != nil {
-		h.log.Error("Validation failed for read notification request", "notification_id", req.GetNotificationId(), "error", err)
+		h.log.Error("Validation failed for read notification request",
+			slog.Int64("notification_id", req.GetNotificationId()),
+			slog.String("error", err.Error()))
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
@@ -53,17 +56,23 @@ func (h *ReadNotificationHandler) Handle(ctx context.Context, req *pb.ReadNotifi
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
-			h.log.Error("Invalid input for read notification", "notification_id", req.GetNotificationId(), "error", err)
+			h.log.Error("Invalid input for read notification",
+				slog.Int64("notification_id", req.GetNotificationId()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.InvalidArgument, custom_errors.ErrInvalidInput.Error())
 		case errors.Is(err, custom_errors.ErrNotificationNotFound):
-			h.log.Error("Notification not found", "notification_id", req.GetNotificationId(), "error", err)
+			h.log.Error("Notification not found",
+				slog.Int64("notification_id", req.GetNotificationId()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.NotFound, custom_errors.ErrNotificationNotFound.Error())
 		default:
-			h.log.Error("Internal service error while reading notification", "notification_id", req.GetNotificationId(), "error", err)
+			h.log.Error("Internal service error while reading notification",
+				slog.Int64("notification_id", req.GetNotificationId()),
+				slog.String("error", err.Error()))
 			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
 		}
 	}
 
-	h.log.Info("Successfully marked notification as read", "notification_id", req.GetNotificationId())
+	h.log.Info("Successfully marked notification as read", slog.Int64("notification_id", req.GetNotificationId()))
 	return &emptypb.Empty{}, nil
 }
