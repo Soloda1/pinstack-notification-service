@@ -1,14 +1,18 @@
 FROM golang:1.24.2-alpine AS builder
 
 WORKDIR /app
-COPY . .
+
+COPY go.mod go.sum ./
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o /migrator ./cmd/migrator/main.go
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/migrator ./cmd/migrate
 
 FROM alpine:latest
-WORKDIR /app
-COPY --from=builder /migrator .
-COPY migrations /app/migrations
-COPY config/example.yml ./config/config.yml
 
-CMD ["./migrator", "-command", "up"]
+WORKDIR /app
+
+COPY --from=builder /app/migrator .
+COPY --from=builder /app/migrations ./migrations
+
+CMD ["./migrator"]
