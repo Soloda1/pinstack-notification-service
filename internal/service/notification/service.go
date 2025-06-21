@@ -47,14 +47,14 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 
 	s.log.Info("Sending notification",
 		slog.Int64("user_id", notification.UserID),
-		slog.String("type", notification.Type),
+		slog.String("type", string(notification.Type)),
 	)
 
 	err := s.notificationRepo.Create(ctx, notification)
 	if err != nil {
 		s.log.Error("Failed to send notification",
 			slog.Int64("user_id", notification.UserID),
-			slog.String("type", notification.Type),
+			slog.String("type", string(notification.Type)),
 			slog.String("error", err.Error()),
 		)
 		return err
@@ -62,7 +62,7 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 
 	s.log.Info("Notification sent successfully",
 		slog.Int64("user_id", notification.UserID),
-		slog.String("type", notification.Type),
+		slog.String("type", string(notification.Type)),
 	)
 
 	return nil
@@ -93,7 +93,7 @@ func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (*model.
 	s.log.Info("Notification details retrieved",
 		slog.Int64("id", notification.ID),
 		slog.Int64("user_id", notification.UserID),
-		slog.String("type", notification.Type),
+		slog.String("type", string(notification.Type)),
 	)
 
 	return notification, nil
