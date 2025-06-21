@@ -335,6 +335,7 @@ github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 h1:JIAuq3EE
 github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966/go.mod h1:sUM3LWHvSMaG192sy56D9F7CNvL7jUJVXoqM1QKLnog=
 github.com/soloda1/pinstack-proto-definitions v0.1.16 h1:mJgDouhN16Pk2DRaBCGhvkdITo3Jpmia8OXb9QHxB3Q=
 github.com/soloda1/pinstack-proto-definitions v0.1.16/go.mod h1:Jl7Cv/0eQDLtxI5HdRANm6HYbSjX1x97Za4XRUySwrM=
+github.com/soloda1/pinstack-proto-definitions v0.1.17/go.mod h1:Jl7Cv/0eQDLtxI5HdRANm6HYbSjX1x97Za4XRUySwrM=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.12.0 h1:UcOPyRBYczmFn6yvphxkn9ZEOY65cpwGKb5mL36mrqs=
