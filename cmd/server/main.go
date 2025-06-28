@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"pinstack-notification-service/config"
@@ -54,9 +57,21 @@ func main() {
 	notificationGRPCApi := notification_grpc.NewNotificationGRPCService(notificationService, log)
 	grpcServer := notification_grpc.NewServer(notificationGRPCApi, cfg.GrpcServer.Address, cfg.GrpcServer.Port, log)
 
+	metricsAddr := fmt.Sprintf("%s:%d", cfg.Prometheus.Address, cfg.Prometheus.Port)
+	metricsServer := &http.Server{
+		Addr:    metricsAddr,
+		Handler: nil,
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+
+	done := make(chan bool, 1)
+	metricsDone := make(chan bool, 1)
+	kafkaShutdownDone := make(chan bool, 1)
+
 	go kafkaConsumer.Start(ctx)
 
-	done := make(chan bool)
 	go func() {
 		if err := grpcServer.Run(); err != nil {
 			log.Error("gRPC server error", slog.String("error", err.Error()))
@@ -64,16 +79,22 @@ func main() {
 		done <- true
 	}()
 
-	// Graceful Shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	http.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		log.Info("Starting Prometheus metrics server", slog.String("address", metricsAddr))
+		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("Prometheus metrics server error", slog.String("error", err.Error()))
+		}
+		metricsDone <- true
+	}()
+
 	<-quit
 	log.Info("Shutting down services...")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
-	kafkaShutdownDone := make(chan bool, 1)
 	go func() {
 		kafkaConsumer.Close()
 		kafkaShutdownDone <- true
@@ -83,11 +104,22 @@ func main() {
 		log.Error("gRPC server shutdown error", slog.String("error", err.Error()))
 	}
 
+	if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("Metrics server shutdown error", slog.String("error", err.Error()))
+	}
+
 	select {
 	case <-done:
 		log.Info("gRPC server shutdown complete")
 	case <-shutdownCtx.Done():
 		log.Error("gRPC server shutdown timeout exceeded", slog.String("error", shutdownCtx.Err().Error()))
+	}
+
+	select {
+	case <-metricsDone:
+		log.Info("Metrics server shutdown complete")
+	case <-shutdownCtx.Done():
+		log.Error("Metrics server shutdown timeout exceeded", slog.String("error", shutdownCtx.Err().Error()))
 	}
 
 	select {

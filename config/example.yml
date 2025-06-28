@@ -35,3 +35,7 @@ database:
   port: "5436"
   db_name: "notificationservice"
   migrations_path: "./migrations"
+
+prometheus:
+  address: "0.0.0.0"
+  port: 9105
