@@ -37,12 +37,18 @@ type EventTypesConfig struct {
 	FollowDeleted string `yaml:"follow_deleted"`
 }
 
+type PrometheusConfig struct {
+	Address string `yaml:"address"`
+	Port    int    `yaml:"port"`
+}
+
 type Config struct {
 	Env        string           `yaml:"env"`
 	GrpcServer GrpcServerConfig `yaml:"grpc_server"`
 	Kafka      KafkaConfig      `yaml:"kafka"`
 	Database   Database         `yaml:"database"`
 	EventTypes EventTypesConfig `yaml:"event_types"`
+	Prometheus PrometheusConfig `yaml:"prometheus"`
 }
 
 type Database struct {
@@ -98,6 +104,10 @@ func MustLoad() *Config {
 	viper.SetDefault("database.db_name", "notificationservice")
 	viper.SetDefault("database.migrations_path", "./migrations")
 
+	// Prometheus defaults
+	viper.SetDefault("prometheus.address", "0.0.0.0")
+	viper.SetDefault("prometheus.port", 9105)
+
 	if err := viper.ReadInConfig(); err != nil {
 		log.Printf("Error reading config file: %s", err)
 		os.Exit(1)
@@ -140,6 +150,10 @@ func MustLoad() *Config {
 		EventTypes: EventTypesConfig{
 			FollowCreated: viper.GetString("event_types.follow_created"),
 			FollowDeleted: viper.GetString("event_types.follow_deleted"),
+		},
+		Prometheus: PrometheusConfig{
+			Address: viper.GetString("prometheus.address"),
+			Port:    viper.GetInt("prometheus.port"),
 		},
 	}
 
