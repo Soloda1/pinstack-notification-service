@@ -18,12 +18,13 @@ import (
 
 func TestService_SendNotification(t *testing.T) {
 	tests := []struct {
-		name         string
-		notification *model.Notification
-		mockSetup    func(*mocks.NotificationRepository)
-		wantErr      bool
-		expectedErr  error
-		expectedID   int64
+		name            string
+		notification    *model.Notification
+		mockSetup       func(*mocks.NotificationRepository)
+		userClientSetup func(*mocks.Client)
+		wantErr         bool
+		expectedErr     error
+		expectedID      int64
 	}{
 		{
 			name: "successful notification send",
@@ -37,6 +38,9 @@ func TestService_SendNotification(t *testing.T) {
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(notif *model.Notification) bool {
 					return notif.UserID == 1 && notif.Type == "relation" && !notif.IsRead
 				})).Return(int64(123), nil)
+			},
+			userClientSetup: func(client *mocks.Client) {
+				client.On("GetUser", mock.Anything, int64(1)).Return(&model.User{ID: 1, Username: "testuser"}, nil)
 			},
 			wantErr:    false,
 			expectedID: 123,
@@ -52,17 +56,21 @@ func TestService_SendNotification(t *testing.T) {
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				repo.On("Create", mock.Anything, mock.Anything).Return(int64(0), custom_errors.ErrDatabaseQuery)
 			},
+			userClientSetup: func(client *mocks.Client) {
+				client.On("GetUser", mock.Anything, int64(1)).Return(&model.User{ID: 1, Username: "testuser"}, nil)
+			},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrDatabaseQuery,
 			expectedID:  0,
 		},
 		{
-			name:         "nil notification",
-			notification: nil,
-			mockSetup:    func(repo *mocks.NotificationRepository) {},
-			wantErr:      true,
-			expectedErr:  custom_errors.ErrInvalidInput,
-			expectedID:   0,
+			name:            "nil notification",
+			notification:    nil,
+			mockSetup:       func(repo *mocks.NotificationRepository) {},
+			userClientSetup: func(client *mocks.Client) {},
+			wantErr:         true,
+			expectedErr:     custom_errors.ErrInvalidInput,
+			expectedID:      0,
 		},
 		{
 			name: "invalid user ID",
@@ -72,10 +80,11 @@ func TestService_SendNotification(t *testing.T) {
 				IsRead:  false,
 				Payload: json.RawMessage(`{"event":"new_follower","follower_id":42}`),
 			},
-			mockSetup:   func(repo *mocks.NotificationRepository) {},
-			wantErr:     true,
-			expectedErr: custom_errors.ErrInvalidInput,
-			expectedID:  0,
+			mockSetup:       func(repo *mocks.NotificationRepository) {},
+			userClientSetup: func(client *mocks.Client) {},
+			wantErr:         true,
+			expectedErr:     custom_errors.ErrInvalidInput,
+			expectedID:      0,
 		},
 		{
 			name: "empty notification type",
@@ -85,7 +94,10 @@ func TestService_SendNotification(t *testing.T) {
 				IsRead:  false,
 				Payload: json.RawMessage(`{"event":"new_follower","follower_id":42}`),
 			},
-			mockSetup:   func(repo *mocks.NotificationRepository) {},
+			mockSetup: func(repo *mocks.NotificationRepository) {},
+			userClientSetup: func(client *mocks.Client) {
+				client.On("GetUser", mock.Anything, int64(1)).Return(&model.User{ID: 1, Username: "testuser"}, nil)
+			},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrInvalidInput,
 			expectedID:  0,
@@ -95,11 +107,13 @@ func TestService_SendNotification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
+			tt.userClientSetup(mockUserClient)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			id, err := service.SaveNotification(context.Background(), tt.notification)
 
 			if tt.wantErr {
@@ -179,11 +193,12 @@ func TestService_GetNotificationDetails(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			got, err := service.GetNotificationDetails(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -250,11 +265,12 @@ func TestService_GetUnreadCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			got, err := service.GetUnreadCount(context.Background(), tt.userID)
 
 			if tt.wantErr {
@@ -380,11 +396,12 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			got, err := service.GetUserNotificationFeed(context.Background(), tt.userID, tt.limit, tt.page)
 
 			if tt.wantErr {
@@ -446,11 +463,12 @@ func TestService_ReadNotification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			err := service.ReadNotification(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -502,11 +520,12 @@ func TestService_ReadAllUserNotifications(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			err := service.ReadAllUserNotifications(context.Background(), tt.userID)
 
 			if tt.wantErr {
@@ -567,11 +586,12 @@ func TestService_RemoveNotification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
+			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
 			err := service.RemoveNotification(context.Background(), tt.id)
 
 			if tt.wantErr {
