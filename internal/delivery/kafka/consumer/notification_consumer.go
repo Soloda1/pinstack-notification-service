@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	"github.com/soloda1/pinstack-proto-definitions/events"
 	"log/slog"
 	"pinstack-notification-service/config"
 	"pinstack-notification-service/internal/custom_errors"
@@ -13,6 +11,9 @@ import (
 	"pinstack-notification-service/internal/model"
 	notification_service "pinstack-notification-service/internal/service/notification"
 	"time"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/soloda1/pinstack-proto-definitions/events"
 )
 
 type NotificationConsumer struct {
@@ -167,13 +168,15 @@ func (c *NotificationConsumer) handleFollowCreated(ctx context.Context, payload 
 		slog.String("type", string(notification.Type)),
 		slog.String("payload", string(notification.Payload)))
 
-	err := c.notificationService.SaveNotification(ctx, notification)
+	notificationID, err := c.notificationService.SaveNotification(ctx, notification)
 	if err != nil {
 		c.log.Error("Failed to save notification", slog.String("error", err.Error()))
 		return err
 	}
 
-	c.log.Info("Notification saved successfully", slog.Int64("user_id", notification.UserID))
+	c.log.Info("Notification saved successfully",
+		slog.Int64("notification_id", notificationID),
+		slog.Int64("user_id", notification.UserID))
 	return nil
 }
 

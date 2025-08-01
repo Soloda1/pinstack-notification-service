@@ -44,7 +44,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				})).Run(func(args mock.Arguments) {
 					notification := args.Get(1).(*model.Notification)
 					notification.ID = 100
-				}).Return(nil)
+				}).Return(int64(100), nil)
 			},
 			wantErr:    false,
 			expectedID: 100,
@@ -95,7 +95,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 			mockSetup: func(mockService *mocks.NotificationService) {
 				mockService.On("SaveNotification", mock.Anything, mock.MatchedBy(func(n *model.Notification) bool {
 					return n.UserID == 999 && n.Type == "test_notification" && string(n.Payload) == string(payload)
-				})).Return(custom_errors.ErrUserNotFound)
+				})).Return(int64(0), custom_errors.ErrUserNotFound)
 			},
 			wantErr:        true,
 			expectedCode:   codes.NotFound,
@@ -121,7 +121,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 				Payload: payload,
 			},
 			mockSetup: func(mockService *mocks.NotificationService) {
-				mockService.On("SaveNotification", mock.Anything, mock.Anything).Return(errors.New("database error"))
+				mockService.On("SaveNotification", mock.Anything, mock.Anything).Return(int64(0), errors.New("database error"))
 			},
 			wantErr:        true,
 			expectedCode:   codes.Internal,

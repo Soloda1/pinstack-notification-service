@@ -3,9 +3,10 @@ package notification_grpc
 import (
 	"context"
 	"errors"
-	"github.com/soloda1/pinstack-proto-definitions/events"
 	"log/slog"
 	"pinstack-notification-service/internal/model"
+
+	"github.com/soloda1/pinstack-proto-definitions/events"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
 	"google.golang.org/grpc/codes"
@@ -17,7 +18,7 @@ import (
 )
 
 type NotificationSender interface {
-	SaveNotification(ctx context.Context, notification *model.Notification) error
+	SaveNotification(ctx context.Context, notification *model.Notification) (int64, error)
 }
 
 type SendNotificationHandler struct {
@@ -68,7 +69,7 @@ func (h *SendNotificationHandler) Handle(ctx context.Context, req *pb.SendNotifi
 		Payload: req.GetPayload(),
 	}
 
-	err := h.notificationService.SaveNotification(ctx, notification)
+	notificationID, err := h.notificationService.SaveNotification(ctx, notification)
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
@@ -93,11 +94,11 @@ func (h *SendNotificationHandler) Handle(ctx context.Context, req *pb.SendNotifi
 	}
 
 	h.log.Info("Successfully sent notification",
-		slog.Int64("notification_id", notification.ID),
+		slog.Int64("notification_id", notificationID),
 		slog.Int64("user_id", notification.UserID),
 		slog.String("type", string(notification.Type)))
 
 	return &pb.SendNotificationResponse{
-		NotificationId: notification.ID,
+		NotificationId: notificationID,
 	}, nil
 }
