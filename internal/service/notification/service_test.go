@@ -318,6 +318,7 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 		page        int
 		mockSetup   func(*mocks.NotificationRepository)
 		want        []*model.Notification
+		wantTotal   int32
 		wantErr     bool
 		expectedErr error
 	}{
@@ -328,10 +329,11 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			page:   1,
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				// Page 1, limit 10 should result in offset 0
-				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, nil)
+				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, int32(2), nil)
 			},
-			want:    notifications,
-			wantErr: false,
+			want:      notifications,
+			wantTotal: 2,
+			wantErr:   false,
 		},
 		{
 			name:   "get second page",
@@ -340,10 +342,11 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			page:   2,
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				// Page 2, limit 5 should result in offset 5
-				repo.On("ListByUser", mock.Anything, int64(5), 5, 5).Return(notifications[1:], nil)
+				repo.On("ListByUser", mock.Anything, int64(5), 5, 5).Return(notifications[1:], int32(2), nil)
 			},
-			want:    notifications[1:],
-			wantErr: false,
+			want:      notifications[1:],
+			wantTotal: 2,
+			wantErr:   false,
 		},
 		{
 			name:   "handle negative limit",
@@ -352,10 +355,11 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			page:   1,
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				// Negative limit should be changed to default (10)
-				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, nil)
+				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, int32(2), nil)
 			},
-			want:    notifications,
-			wantErr: false,
+			want:      notifications,
+			wantTotal: 2,
+			wantErr:   false,
 		},
 		{
 			name:   "handle negative page",
@@ -364,10 +368,11 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			page:   -1,
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				// Negative page should be changed to 1
-				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, nil)
+				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(notifications, int32(2), nil)
 			},
-			want:    notifications,
-			wantErr: false,
+			want:      notifications,
+			wantTotal: 2,
+			wantErr:   false,
 		},
 		{
 			name:   "repository error",
@@ -375,9 +380,10 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			limit:  10,
 			page:   1,
 			mockSetup: func(repo *mocks.NotificationRepository) {
-				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(nil, custom_errors.ErrDatabaseQuery)
+				repo.On("ListByUser", mock.Anything, int64(5), 10, 0).Return(nil, int32(0), custom_errors.ErrDatabaseQuery)
 			},
 			want:        nil,
+			wantTotal:   0,
 			wantErr:     true,
 			expectedErr: custom_errors.ErrDatabaseQuery,
 		},
@@ -388,6 +394,7 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			page:        1,
 			mockSetup:   func(repo *mocks.NotificationRepository) {},
 			want:        nil,
+			wantTotal:   0,
 			wantErr:     true,
 			expectedErr: custom_errors.ErrInvalidInput,
 		},
@@ -402,16 +409,18 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			tt.mockSetup(mockRepo)
 
 			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
-			got, err := service.GetUserNotificationFeed(context.Background(), tt.userID, tt.limit, tt.page)
+			got, gotTotal, err := service.GetUserNotificationFeed(context.Background(), tt.userID, tt.limit, tt.page)
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Equal(t, tt.wantTotal, gotTotal)
 				if tt.expectedErr != nil {
 					assert.ErrorIs(t, err, tt.expectedErr)
 				}
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.wantTotal, gotTotal)
 			}
 		})
 	}
