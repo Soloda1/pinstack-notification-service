@@ -3,9 +3,6 @@ package notification_service_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
@@ -13,6 +10,10 @@ import (
 	"pinstack-notification-service/mocks"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestService_SendNotification(t *testing.T) {
@@ -22,6 +23,7 @@ func TestService_SendNotification(t *testing.T) {
 		mockSetup    func(*mocks.NotificationRepository)
 		wantErr      bool
 		expectedErr  error
+		expectedID   int64
 	}{
 		{
 			name: "successful notification send",
@@ -34,9 +36,10 @@ func TestService_SendNotification(t *testing.T) {
 			mockSetup: func(repo *mocks.NotificationRepository) {
 				repo.On("Create", mock.Anything, mock.MatchedBy(func(notif *model.Notification) bool {
 					return notif.UserID == 1 && notif.Type == "relation" && !notif.IsRead
-				})).Return(nil)
+				})).Return(int64(123), nil)
 			},
-			wantErr: false,
+			wantErr:    false,
+			expectedID: 123,
 		},
 		{
 			name: "repository error",
@@ -47,10 +50,11 @@ func TestService_SendNotification(t *testing.T) {
 				Payload: json.RawMessage(`{"event":"new_follower","follower_id":42}`),
 			},
 			mockSetup: func(repo *mocks.NotificationRepository) {
-				repo.On("Create", mock.Anything, mock.Anything).Return(custom_errors.ErrDatabaseQuery)
+				repo.On("Create", mock.Anything, mock.Anything).Return(int64(0), custom_errors.ErrDatabaseQuery)
 			},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrDatabaseQuery,
+			expectedID:  0,
 		},
 		{
 			name:         "nil notification",
@@ -58,6 +62,7 @@ func TestService_SendNotification(t *testing.T) {
 			mockSetup:    func(repo *mocks.NotificationRepository) {},
 			wantErr:      true,
 			expectedErr:  custom_errors.ErrInvalidInput,
+			expectedID:   0,
 		},
 		{
 			name: "invalid user ID",
@@ -70,6 +75,7 @@ func TestService_SendNotification(t *testing.T) {
 			mockSetup:   func(repo *mocks.NotificationRepository) {},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrInvalidInput,
+			expectedID:  0,
 		},
 		{
 			name: "empty notification type",
@@ -82,6 +88,7 @@ func TestService_SendNotification(t *testing.T) {
 			mockSetup:   func(repo *mocks.NotificationRepository) {},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrInvalidInput,
+			expectedID:  0,
 		},
 	}
 
@@ -93,15 +100,17 @@ func TestService_SendNotification(t *testing.T) {
 			tt.mockSetup(mockRepo)
 
 			service := notification_service.NewNotificationService(log, mockRepo)
-			err := service.SaveNotification(context.Background(), tt.notification)
+			id, err := service.SaveNotification(context.Background(), tt.notification)
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Equal(t, tt.expectedID, id)
 				if tt.expectedErr != nil {
 					assert.ErrorIs(t, err, tt.expectedErr)
 				}
 			} else {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedID, id)
 			}
 		})
 	}

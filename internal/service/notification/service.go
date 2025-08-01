@@ -23,20 +23,20 @@ func NewNotificationService(log *logger.Logger, notificationRepo notification_re
 	}
 }
 
-func (s *Service) SaveNotification(ctx context.Context, notification *model.Notification) error {
+func (s *Service) SaveNotification(ctx context.Context, notification *model.Notification) (int64, error) {
 	if notification == nil {
 		s.log.Error("Notification is nil")
-		return custom_errors.ErrInvalidInput
+		return 0, custom_errors.ErrInvalidInput
 	}
 
 	if notification.UserID <= 0 {
 		s.log.Error("Invalid user ID in notification", slog.Int64("user_id", notification.UserID))
-		return custom_errors.ErrInvalidInput
+		return 0, custom_errors.ErrInvalidInput
 	}
 
 	if notification.Type == "" {
 		s.log.Error("Empty notification type", slog.Int64("user_id", notification.UserID))
-		return custom_errors.ErrInvalidInput
+		return 0, custom_errors.ErrInvalidInput
 	}
 
 	if notification.CreatedAt.IsZero() {
@@ -50,22 +50,23 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 		slog.String("type", string(notification.Type)),
 	)
 
-	err := s.notificationRepo.Create(ctx, notification)
+	notificationID, err := s.notificationRepo.Create(ctx, notification)
 	if err != nil {
 		s.log.Error("Failed to send notification",
 			slog.Int64("user_id", notification.UserID),
 			slog.String("type", string(notification.Type)),
 			slog.String("error", err.Error()),
 		)
-		return err
+		return 0, err
 	}
 
 	s.log.Info("Notification sent successfully",
+		slog.Int64("notification_id", notificationID),
 		slog.Int64("user_id", notification.UserID),
 		slog.String("type", string(notification.Type)),
 	)
 
-	return nil
+	return notificationID, nil
 }
 
 func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (*model.Notification, error) {
