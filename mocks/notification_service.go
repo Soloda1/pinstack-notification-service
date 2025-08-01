@@ -139,7 +139,7 @@ func (_c *NotificationService_GetUnreadCount_Call) RunAndReturn(run func(context
 }
 
 // GetUserNotificationFeed provides a mock function with given fields: ctx, userID, limit, page
-func (_m *NotificationService) GetUserNotificationFeed(ctx context.Context, userID int64, limit int, page int) ([]*model.Notification, error) {
+func (_m *NotificationService) GetUserNotificationFeed(ctx context.Context, userID int64, limit int, page int) ([]*model.Notification, int32, error) {
 	ret := _m.Called(ctx, userID, limit, page)
 
 	if len(ret) == 0 {
@@ -147,8 +147,9 @@ func (_m *NotificationService) GetUserNotificationFeed(ctx context.Context, user
 	}
 
 	var r0 []*model.Notification
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) ([]*model.Notification, error)); ok {
+	var r1 int32
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) ([]*model.Notification, int32, error)); ok {
 		return rf(ctx, userID, limit, page)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) []*model.Notification); ok {
@@ -159,13 +160,19 @@ func (_m *NotificationService) GetUserNotificationFeed(ctx context.Context, user
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int, int) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, int) int32); ok {
 		r1 = rf(ctx, userID, limit, page)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int32)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, int64, int, int) error); ok {
+		r2 = rf(ctx, userID, limit, page)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // NotificationService_GetUserNotificationFeed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserNotificationFeed'
@@ -189,12 +196,12 @@ func (_c *NotificationService_GetUserNotificationFeed_Call) Run(run func(ctx con
 	return _c
 }
 
-func (_c *NotificationService_GetUserNotificationFeed_Call) Return(_a0 []*model.Notification, _a1 error) *NotificationService_GetUserNotificationFeed_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *NotificationService_GetUserNotificationFeed_Call) Return(_a0 []*model.Notification, _a1 int32, _a2 error) *NotificationService_GetUserNotificationFeed_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *NotificationService_GetUserNotificationFeed_Call) RunAndReturn(run func(context.Context, int64, int, int) ([]*model.Notification, error)) *NotificationService_GetUserNotificationFeed_Call {
+func (_c *NotificationService_GetUserNotificationFeed_Call) RunAndReturn(run func(context.Context, int64, int, int) ([]*model.Notification, int32, error)) *NotificationService_GetUserNotificationFeed_Call {
 	_c.Call.Return(run)
 	return _c
 }

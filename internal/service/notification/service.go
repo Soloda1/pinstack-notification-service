@@ -141,10 +141,10 @@ func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (int, error)
 	return count, nil
 }
 
-func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, error) {
+func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, int32, error) {
 	if userID <= 0 {
 		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
-		return nil, custom_errors.ErrInvalidInput
+		return nil, 0, custom_errors.ErrInvalidInput
 	}
 
 	if limit <= 0 {
@@ -166,7 +166,7 @@ func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, lim
 		slog.Int("offset", offset),
 	)
 
-	notifications, err := s.notificationRepo.ListByUser(ctx, userID, limit, offset)
+	notifications, totalCount, err := s.notificationRepo.ListByUser(ctx, userID, limit, offset)
 	if err != nil {
 		s.log.Error("Failed to retrieve notification feed",
 			slog.Int64("user_id", userID),
@@ -174,16 +174,17 @@ func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, lim
 			slog.Int("page", page),
 			slog.String("error", err.Error()),
 		)
-		return nil, err
+		return nil, 0, err
 	}
 
 	s.log.Info("User notification feed retrieved",
 		slog.Int64("user_id", userID),
 		slog.Int("count", len(notifications)),
+		slog.Int("total_count", int(totalCount)),
 		slog.Int("page", page),
 	)
 
-	return notifications, nil
+	return notifications, totalCount, nil
 }
 
 func (s *Service) ReadNotification(ctx context.Context, id int64) error {
