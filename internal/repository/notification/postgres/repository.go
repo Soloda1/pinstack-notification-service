@@ -3,15 +3,16 @@ package notification_repository_postgres
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/soloda1/pinstack-proto-definitions/events"
 	"log/slog"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/soloda1/pinstack-proto-definitions/events"
 )
 
 type NotificationRepository struct {
@@ -23,7 +24,7 @@ func NewNotificationRepository(db PgDB, log *logger.Logger) *NotificationReposit
 	return &NotificationRepository{db: db, log: log}
 }
 
-func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) error {
+func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) (int64, error) {
 	createdAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	if !notif.CreatedAt.IsZero() {
 		createdAt.Time = notif.CreatedAt
@@ -80,19 +81,23 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 				slog.Int64("user_id", notif.UserID),
 			)
 
-			return custom_errors.ErrDatabaseQuery
+			return 0, custom_errors.ErrDatabaseQuery
 		}
 
 		r.log.Error("Failed to create notification", slog.String("error", err.Error()))
-		return err
+		return 0, err
 	}
+
+	// Update the passed notification object with the created data
+	notif.ID = createdNotification.ID
+	notif.CreatedAt = createdNotification.CreatedAt
 
 	r.log.Debug("Notification created successfully",
 		slog.Int64("id", createdNotification.ID),
 		slog.Int64("user_id", createdNotification.UserID),
 	)
 
-	return nil
+	return createdNotification.ID, nil
 }
 
 func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.Notification, error) {

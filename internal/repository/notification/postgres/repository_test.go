@@ -4,11 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
@@ -16,6 +11,12 @@ import (
 	"pinstack-notification-service/mocks"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func createSuccessCommandTag() pgconn.CommandTag {
@@ -75,6 +76,7 @@ func TestNotificationRepository_Create(t *testing.T) {
 		mockSetup    func(*mocks.PgDB)
 		wantErr      bool
 		expectedErr  error
+		expectedID   int64
 	}{
 		{
 			name: "successful create notification",
@@ -116,7 +118,8 @@ func TestNotificationRepository_Create(t *testing.T) {
 					mock.AnythingOfType("string"),
 					mock.Anything).Return(mockRow)
 			},
-			wantErr: false,
+			wantErr:    false,
+			expectedID: 1,
 		},
 		{
 			name: "database error",
@@ -145,6 +148,7 @@ func TestNotificationRepository_Create(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: errors.New("db error"),
+			expectedID:  0,
 		},
 		{
 			name: "postgres specific error",
@@ -178,6 +182,7 @@ func TestNotificationRepository_Create(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: custom_errors.ErrDatabaseQuery,
+			expectedID:  0,
 		},
 	}
 
@@ -191,15 +196,18 @@ func TestNotificationRepository_Create(t *testing.T) {
 			}
 
 			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
-			err := repo.Create(context.Background(), &tt.notification)
+			id, err := repo.Create(context.Background(), &tt.notification)
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Equal(t, int64(0), id)
 				if errors.Is(err, custom_errors.ErrDatabaseQuery) {
 					assert.ErrorIs(t, err, custom_errors.ErrDatabaseQuery)
 				}
 			} else {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedID, id)
+				assert.Equal(t, tt.expectedID, tt.notification.ID)
 			}
 		})
 	}
