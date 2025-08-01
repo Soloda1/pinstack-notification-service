@@ -49,7 +49,7 @@ type Config struct {
 	Database    Database         `yaml:"database"`
 	EventTypes  EventTypesConfig `yaml:"event_types"`
 	Prometheus  PrometheusConfig `yaml:"prometheus"`
-	UserService UserService      `yaml:user_service`
+	UserService UserService      `yaml:"user_service"`
 }
 
 type UserService struct {
