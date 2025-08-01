@@ -17,7 +17,7 @@ import (
 )
 
 type UserNotificationFeedGetter interface {
-	GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, error)
+	GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, int32, error)
 }
 
 type GetUserNotificationFeedHandler struct {
@@ -62,7 +62,7 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 		return nil, status.Error(codes.InvalidArgument, custom_errors.ErrValidationFailed.Error())
 	}
 
-	notifications, err := h.notificationService.GetUserNotificationFeed(ctx, req.GetUserId(), int(req.GetLimit()), int(req.GetPage()))
+	notifications, totalCount, err := h.notificationService.GetUserNotificationFeed(ctx, req.GetUserId(), int(req.GetLimit()), int(req.GetPage()))
 	if err != nil {
 		switch {
 		case errors.Is(err, custom_errors.ErrInvalidInput):
@@ -89,6 +89,9 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 
 	response := &pb.GetUserNotificationFeedResponse{
 		Notifications: make([]*pb.NotificationResponse, 0, len(notifications)),
+		Total:         totalCount,
+		Limit:         req.GetLimit(),
+		Page:          req.GetPage(),
 	}
 
 	for _, notification := range notifications {
@@ -104,7 +107,8 @@ func (h *GetUserNotificationFeedHandler) Handle(ctx context.Context, req *pb.Get
 
 	h.log.Info("Successfully retrieved user notification feed",
 		slog.Int64("user_id", req.GetUserId()),
-		slog.Int("notifications_count", len(notifications)))
+		slog.Int("notifications_count", len(notifications)),
+		slog.Int("total_count", int(totalCount)))
 
 	return response, nil
 }
