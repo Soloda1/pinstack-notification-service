@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	user_client "pinstack-notification-service/internal/clients/user"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
@@ -13,13 +14,15 @@ import (
 
 type Service struct {
 	notificationRepo notification_repository.NotificationRepository
+	userClient       user_client.Client
 	log              *logger.Logger
 }
 
-func NewNotificationService(log *logger.Logger, notificationRepo notification_repository.NotificationRepository) *Service {
+func NewNotificationService(log *logger.Logger, notificationRepo notification_repository.NotificationRepository, userClient user_client.Client) *Service {
 	return &Service{
 		log:              log,
 		notificationRepo: notificationRepo,
+		userClient:       userClient,
 	}
 }
 
@@ -32,6 +35,19 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 	if notification.UserID <= 0 {
 		s.log.Error("Invalid user ID in notification", slog.Int64("user_id", notification.UserID))
 		return 0, custom_errors.ErrInvalidInput
+	}
+
+	_, err := s.userClient.GetUser(ctx, notification.UserID)
+	if err != nil {
+		s.log.Error("Failed to get user", slog.Int64("user_id", notification.UserID))
+		switch {
+		case errors.Is(err, custom_errors.ErrUserNotFound):
+			s.log.Debug("User not found in save notification", slog.Int64("user_id", notification.UserID), slog.String("error", err.Error()))
+			return 0, custom_errors.ErrUserNotFound
+		default:
+			s.log.Error("Failed to get user", slog.Int64("user_id", notification.UserID))
+			return 0, err
+		}
 	}
 
 	if notification.Type == "" {
