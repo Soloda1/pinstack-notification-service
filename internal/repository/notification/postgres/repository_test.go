@@ -9,6 +9,7 @@ import (
 	"pinstack-notification-service/internal/model"
 	notification_repository_postgres "pinstack-notification-service/internal/repository/notification/postgres"
 	"pinstack-notification-service/mocks"
+	"strings"
 	"testing"
 	"time"
 
@@ -406,6 +407,7 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 		offset      int
 		mockSetup   func(*mocks.PgDB)
 		want        []*model.Notification
+		wantTotal   int32
 		wantErr     bool
 		expectedErr error
 		checkQuery  bool
@@ -416,10 +418,27 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			limit:  10,
 			offset: 0,
 			mockSetup: func(db *mocks.PgDB) {
+				// Mock count query
+				mockCountRow := new(mocks.Row)
+				mockCountRow.On("Scan", mock.AnythingOfType("*int32")).
+					Run(func(args mock.Arguments) {
+						totalPtr := args[0].(*int32)
+						*totalPtr = 2
+					}).Return(nil)
+				db.On("QueryRow",
+					mock.Anything,
+					mock.MatchedBy(func(query string) bool {
+						return strings.Contains(query, "COUNT(*)")
+					}),
+					mock.Anything).Return(mockCountRow)
+
+				// Mock list query
 				rows := setupMockNotificationRows(t, []model.Notification{notif1, notif2})
 				db.On("Query",
 					mock.Anything,
-					mock.AnythingOfType("string"),
+					mock.MatchedBy(func(query string) bool {
+						return strings.Contains(query, "SELECT id, user_id")
+					}),
 					mock.MatchedBy(func(args pgx.NamedArgs) bool {
 						return args["user_id"] == int64(5) &&
 							args["limit"] == 10 &&
@@ -427,6 +446,7 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 					})).Return(rows, nil)
 			},
 			want:       []*model.Notification{&notif1, &notif2},
+			wantTotal:  2,
 			wantErr:    false,
 			checkQuery: true,
 		},
@@ -436,10 +456,27 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			limit:  5,
 			offset: 10,
 			mockSetup: func(db *mocks.PgDB) {
+				// Mock count query
+				mockCountRow := new(mocks.Row)
+				mockCountRow.On("Scan", mock.AnythingOfType("*int32")).
+					Run(func(args mock.Arguments) {
+						totalPtr := args[0].(*int32)
+						*totalPtr = 2
+					}).Return(nil)
+				db.On("QueryRow",
+					mock.Anything,
+					mock.MatchedBy(func(query string) bool {
+						return strings.Contains(query, "COUNT(*)")
+					}),
+					mock.Anything).Return(mockCountRow)
+
+				// Mock list query
 				rows := setupMockNotificationRows(t, []model.Notification{notif2})
 				db.On("Query",
 					mock.Anything,
-					mock.AnythingOfType("string"),
+					mock.MatchedBy(func(query string) bool {
+						return strings.Contains(query, "SELECT id, user_id")
+					}),
 					mock.MatchedBy(func(args pgx.NamedArgs) bool {
 						return args["user_id"] == int64(5) &&
 							args["limit"] == 5 &&
@@ -447,6 +484,7 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 					})).Return(rows, nil)
 			},
 			want:       []*model.Notification{&notif2},
+			wantTotal:  2,
 			wantErr:    false,
 			checkQuery: true,
 		},
@@ -456,14 +494,22 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			limit:  10,
 			offset: 0,
 			mockSetup: func(db *mocks.PgDB) {
+				// Mock count query
+				mockCountRow := new(mocks.Row)
+				mockCountRow.On("Scan", mock.AnythingOfType("*int32")).
+					Run(func(args mock.Arguments) {
+						totalPtr := args[0].(*int32)
+						*totalPtr = 0
+					}).Return(nil)
+				db.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockCountRow)
+
+				// Mock list query
 				rows := setupMockNotificationRows(t, []model.Notification{})
-				db.On("Query",
-					mock.Anything,
-					mock.AnythingOfType("string"),
-					mock.Anything).Return(rows, nil)
+				db.On("Query", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(rows, nil)
 			},
-			want:    []*model.Notification{},
-			wantErr: false,
+			want:      []*model.Notification{},
+			wantTotal: 0,
+			wantErr:   false,
 		},
 		{
 			name:   "database query error",
@@ -471,12 +517,13 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			limit:  10,
 			offset: 0,
 			mockSetup: func(db *mocks.PgDB) {
-				db.On("Query",
-					mock.Anything,
-					mock.AnythingOfType("string"),
-					mock.Anything).Return(nil, errors.New("db error"))
+				// Mock count query error
+				mockCountRow := new(mocks.Row)
+				mockCountRow.On("Scan", mock.AnythingOfType("*int32")).Return(errors.New("db error"))
+				db.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockCountRow)
 			},
 			want:        nil,
+			wantTotal:   0,
 			wantErr:     true,
 			expectedErr: errors.New("db error"),
 		},
@@ -486,6 +533,16 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			limit:  10,
 			offset: 0,
 			mockSetup: func(db *mocks.PgDB) {
+				// Mock count query success
+				mockCountRow := new(mocks.Row)
+				mockCountRow.On("Scan", mock.AnythingOfType("*int32")).
+					Run(func(args mock.Arguments) {
+						totalPtr := args[0].(*int32)
+						*totalPtr = 1
+					}).Return(nil)
+				db.On("QueryRow", mock.Anything, mock.AnythingOfType("string"), mock.Anything).Return(mockCountRow)
+
+				// Mock list query with scan error
 				mockRows := mocks.NewRows(t)
 				mockRows.On("Next").Return(true).Once()
 				mockRows.On("Scan",
@@ -502,6 +559,7 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 					mock.Anything).Return(mockRows, nil)
 			},
 			want:        nil,
+			wantTotal:   0,
 			wantErr:     true,
 			expectedErr: custom_errors.ErrDatabaseScan,
 		},
@@ -517,15 +575,17 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			}
 
 			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
-			got, err := repo.ListByUser(context.Background(), tt.userID, tt.limit, tt.offset)
+			got, gotTotal, err := repo.ListByUser(context.Background(), tt.userID, tt.limit, tt.offset)
 
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Equal(t, tt.wantTotal, gotTotal)
 				if tt.expectedErr != nil && tt.expectedErr == custom_errors.ErrDatabaseScan {
 					assert.ErrorIs(t, err, custom_errors.ErrDatabaseScan)
 				}
 			} else {
 				require.NoError(t, err)
+				assert.Equal(t, tt.wantTotal, gotTotal)
 				assert.Equal(t, len(tt.want), len(got))
 
 				for i, wantNotif := range tt.want {
