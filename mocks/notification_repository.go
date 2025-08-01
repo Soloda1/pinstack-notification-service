@@ -80,21 +80,31 @@ func (_c *NotificationRepository_CountUnread_Call) RunAndReturn(run func(context
 }
 
 // Create provides a mock function with given fields: ctx, notif
-func (_m *NotificationRepository) Create(ctx context.Context, notif *model.Notification) error {
+func (_m *NotificationRepository) Create(ctx context.Context, notif *model.Notification) (int64, error) {
 	ret := _m.Called(ctx, notif)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *model.Notification) error); ok {
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Notification) (int64, error)); ok {
+		return rf(ctx, notif)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Notification) int64); ok {
 		r0 = rf(ctx, notif)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int64)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, *model.Notification) error); ok {
+		r1 = rf(ctx, notif)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // NotificationRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
@@ -116,12 +126,12 @@ func (_c *NotificationRepository_Create_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *NotificationRepository_Create_Call) Return(_a0 error) *NotificationRepository_Create_Call {
-	_c.Call.Return(_a0)
+func (_c *NotificationRepository_Create_Call) Return(_a0 int64, _a1 error) *NotificationRepository_Create_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *NotificationRepository_Create_Call) RunAndReturn(run func(context.Context, *model.Notification) error) *NotificationRepository_Create_Call {
+func (_c *NotificationRepository_Create_Call) RunAndReturn(run func(context.Context, *model.Notification) (int64, error)) *NotificationRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -233,7 +243,7 @@ func (_c *NotificationRepository_GetByID_Call) RunAndReturn(run func(context.Con
 }
 
 // ListByUser provides a mock function with given fields: ctx, userID, limit, offset
-func (_m *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, error) {
+func (_m *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, int32, error) {
 	ret := _m.Called(ctx, userID, limit, offset)
 
 	if len(ret) == 0 {
@@ -241,8 +251,9 @@ func (_m *NotificationRepository) ListByUser(ctx context.Context, userID int64, 
 	}
 
 	var r0 []*model.Notification
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) ([]*model.Notification, error)); ok {
+	var r1 int32
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) ([]*model.Notification, int32, error)); ok {
 		return rf(ctx, userID, limit, offset)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) []*model.Notification); ok {
@@ -253,13 +264,19 @@ func (_m *NotificationRepository) ListByUser(ctx context.Context, userID int64, 
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int, int) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, int) int32); ok {
 		r1 = rf(ctx, userID, limit, offset)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int32)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, int64, int, int) error); ok {
+		r2 = rf(ctx, userID, limit, offset)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // NotificationRepository_ListByUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByUser'
@@ -283,12 +300,12 @@ func (_c *NotificationRepository_ListByUser_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *NotificationRepository_ListByUser_Call) Return(_a0 []*model.Notification, _a1 error) *NotificationRepository_ListByUser_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *NotificationRepository_ListByUser_Call) Return(_a0 []*model.Notification, _a1 int32, _a2 error) *NotificationRepository_ListByUser_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *NotificationRepository_ListByUser_Call) RunAndReturn(run func(context.Context, int64, int, int) ([]*model.Notification, error)) *NotificationRepository_ListByUser_Call {
+func (_c *NotificationRepository_ListByUser_Call) RunAndReturn(run func(context.Context, int64, int, int) ([]*model.Notification, int32, error)) *NotificationRepository_ListByUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

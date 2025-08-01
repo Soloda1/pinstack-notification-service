@@ -3,15 +3,16 @@ package notification_repository_postgres
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/soloda1/pinstack-proto-definitions/events"
 	"log/slog"
 	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/soloda1/pinstack-proto-definitions/events"
 )
 
 type NotificationRepository struct {
@@ -23,7 +24,7 @@ func NewNotificationRepository(db PgDB, log *logger.Logger) *NotificationReposit
 	return &NotificationRepository{db: db, log: log}
 }
 
-func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) error {
+func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) (int64, error) {
 	createdAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	if !notif.CreatedAt.IsZero() {
 		createdAt.Time = notif.CreatedAt
@@ -80,19 +81,23 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 				slog.Int64("user_id", notif.UserID),
 			)
 
-			return custom_errors.ErrDatabaseQuery
+			return 0, custom_errors.ErrDatabaseQuery
 		}
 
 		r.log.Error("Failed to create notification", slog.String("error", err.Error()))
-		return err
+		return 0, err
 	}
+
+	// Update the passed notification object with the created data
+	notif.ID = createdNotification.ID
+	notif.CreatedAt = createdNotification.CreatedAt
 
 	r.log.Debug("Notification created successfully",
 		slog.Int64("id", createdNotification.ID),
 		slog.Int64("user_id", createdNotification.UserID),
 	)
 
-	return nil
+	return createdNotification.ID, nil
 }
 
 func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.Notification, error) {
@@ -150,7 +155,36 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	return &notification, nil
 }
 
-func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, error) {
+func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, int32, error) {
+	countQuery := `
+		SELECT COUNT(*)
+		FROM notifications 
+		WHERE user_id = @user_id
+	`
+
+	countArgs := pgx.NamedArgs{
+		"user_id": userID,
+	}
+
+	var totalCount int32
+	err := r.db.QueryRow(ctx, countQuery, countArgs).Scan(&totalCount)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			r.log.Error("Failed to count notifications",
+				slog.String("pg_error_code", pgErr.Code),
+				slog.String("pg_error_message", pgErr.Message),
+				slog.String("pg_error_detail", pgErr.Detail),
+				slog.Int64("user_id", userID),
+			)
+
+			return nil, 0, custom_errors.ErrDatabaseQuery
+		}
+
+		r.log.Error("Failed to count notifications", slog.String("error", err.Error()))
+		return nil, 0, err
+	}
+
 	query := `
 		SELECT id, user_id, type, is_read, created_at, payload 
 		FROM notifications 
@@ -169,6 +203,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 		slog.Int64("user_id", userID),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset),
+		slog.Int("total_count", int(totalCount)),
 	)
 
 	rows, err := r.db.Query(ctx, query, args)
@@ -182,11 +217,11 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 				slog.Int64("user_id", userID),
 			)
 
-			return nil, custom_errors.ErrDatabaseQuery
+			return nil, 0, custom_errors.ErrDatabaseQuery
 		}
 
 		r.log.Error("Failed to list notifications", slog.String("error", err.Error()))
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -206,7 +241,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 
 		if err != nil {
 			r.log.Error("Failed to scan notification row", slog.String("error", err.Error()))
-			return nil, custom_errors.ErrDatabaseScan
+			return nil, 0, custom_errors.ErrDatabaseScan
 		}
 
 		notifications = append(notifications, &notification)
@@ -214,15 +249,16 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 
 	if err := rows.Err(); err != nil {
 		r.log.Error("Error during rows iteration", slog.String("error", err.Error()))
-		return nil, err
+		return nil, 0, err
 	}
 
 	r.log.Debug("Retrieved notifications successfully",
 		slog.Int64("user_id", userID),
 		slog.Int("count", len(notifications)),
+		slog.Int("total_count", int(totalCount)),
 	)
 
-	return notifications, nil
+	return notifications, totalCount, nil
 }
 
 func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error {

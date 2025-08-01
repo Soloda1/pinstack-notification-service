@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"pinstack-notification-service/config"
+	user_client "pinstack-notification-service/internal/clients/user"
 	notification_grpc "pinstack-notification-service/internal/delivery/grpc"
 	"pinstack-notification-service/internal/delivery/kafka/consumer"
 	"pinstack-notification-service/internal/logger"
@@ -44,9 +47,21 @@ func main() {
 	}
 	defer pool.Close()
 
+	userServiceConn, err := grpc.NewClient(
+		fmt.Sprintf("%s:%d", cfg.UserService.Address, cfg.UserService.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("Failed to connect to user service", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer userServiceConn.Close()
+
+	userClient := user_client.NewUserClient(userServiceConn, log)
+
 	notificationRepo := repository_postgres.NewNotificationRepository(pool, log)
 
-	notificationService := notification_service.NewNotificationService(log, notificationRepo)
+	notificationService := notification_service.NewNotificationService(log, notificationRepo, userClient)
 
 	kafkaConsumer, err := consumer.NewNotificationConsumer(cfg.Kafka, log, notificationService)
 	if err != nil {

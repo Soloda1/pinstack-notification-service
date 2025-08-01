@@ -46,7 +46,7 @@ func TestGetUserNotificationFeed_Success(t *testing.T) {
 		},
 	}
 
-	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return(notifications, nil)
+	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return(notifications, int32(2), nil)
 
 	handler := notification_grpc.NewGetUserNotificationFeedHandler(mockService, log)
 	req := &pb.GetUserNotificationFeedRequest{
@@ -60,6 +60,7 @@ func TestGetUserNotificationFeed_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, 2, len(resp.Notifications))
+	assert.Equal(t, int32(2), resp.Total)
 	assert.Equal(t, notifications[0].ID, resp.Notifications[0].Id)
 	assert.Equal(t, string(notifications[0].Type), resp.Notifications[0].Type)
 
@@ -70,7 +71,7 @@ func TestGetUserNotificationFeed_EmptyList(t *testing.T) {
 	mockService := mocks.NewNotificationService(t)
 	log := logger.New("dev")
 
-	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return([]*model.Notification{}, nil)
+	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return([]*model.Notification{}, int32(0), nil)
 
 	handler := notification_grpc.NewGetUserNotificationFeedHandler(mockService, log)
 	req := &pb.GetUserNotificationFeedRequest{
@@ -84,6 +85,7 @@ func TestGetUserNotificationFeed_EmptyList(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, 0, len(resp.Notifications))
+	assert.Equal(t, int32(0), resp.Total)
 
 	mockService.AssertExpectations(t)
 }
@@ -92,7 +94,7 @@ func TestGetUserNotificationFeed_UserNotFound(t *testing.T) {
 	mockService := mocks.NewNotificationService(t)
 	log := logger.New("dev")
 
-	mockService.On("GetUserNotificationFeed", mock.Anything, int64(999), 10, 1).Return(nil, custom_errors.ErrUserNotFound)
+	mockService.On("GetUserNotificationFeed", mock.Anything, int64(999), 10, 1).Return(nil, int32(0), custom_errors.ErrUserNotFound)
 
 	handler := notification_grpc.NewGetUserNotificationFeedHandler(mockService, log)
 	req := &pb.GetUserNotificationFeedRequest{
@@ -117,7 +119,7 @@ func TestGetUserNotificationFeed_InternalError(t *testing.T) {
 	mockService := mocks.NewNotificationService(t)
 	log := logger.New("dev")
 
-	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return(nil, errors.New("database error"))
+	mockService.On("GetUserNotificationFeed", mock.Anything, int64(1), 10, 1).Return(nil, int32(0), errors.New("database error"))
 
 	handler := notification_grpc.NewGetUserNotificationFeedHandler(mockService, log)
 	req := &pb.GetUserNotificationFeedRequest{
