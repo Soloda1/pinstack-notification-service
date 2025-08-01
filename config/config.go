@@ -43,12 +43,18 @@ type PrometheusConfig struct {
 }
 
 type Config struct {
-	Env        string           `yaml:"env"`
-	GrpcServer GrpcServerConfig `yaml:"grpc_server"`
-	Kafka      KafkaConfig      `yaml:"kafka"`
-	Database   Database         `yaml:"database"`
-	EventTypes EventTypesConfig `yaml:"event_types"`
-	Prometheus PrometheusConfig `yaml:"prometheus"`
+	Env         string           `yaml:"env"`
+	GrpcServer  GrpcServerConfig `yaml:"grpc_server"`
+	Kafka       KafkaConfig      `yaml:"kafka"`
+	Database    Database         `yaml:"database"`
+	EventTypes  EventTypesConfig `yaml:"event_types"`
+	Prometheus  PrometheusConfig `yaml:"prometheus"`
+	UserService UserService      `yaml:user_service`
+}
+
+type UserService struct {
+	Address string
+	Port    int
 }
 
 type Database struct {
@@ -104,6 +110,10 @@ func MustLoad() *Config {
 	viper.SetDefault("database.db_name", "notificationservice")
 	viper.SetDefault("database.migrations_path", "./migrations")
 
+	// User service defaults
+	viper.SetDefault("user_service.address", "user-service")
+	viper.SetDefault("user_service.port", 50051)
+
 	// Prometheus defaults
 	viper.SetDefault("prometheus.address", "0.0.0.0")
 	viper.SetDefault("prometheus.port", 9105)
@@ -146,6 +156,10 @@ func MustLoad() *Config {
 			Port:           viper.GetString("database.port"),
 			DbName:         viper.GetString("database.db_name"),
 			MigrationsPath: viper.GetString("database.migrations_path"),
+		},
+		UserService: UserService{
+			Address: viper.GetString("user_service.address"),
+			Port:    viper.GetInt("user_service.port"),
 		},
 		EventTypes: EventTypesConfig{
 			FollowCreated: viper.GetString("event_types.follow_created"),
