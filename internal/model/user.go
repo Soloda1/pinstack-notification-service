@@ -1,8 +1,9 @@
 package model
 
 import (
-	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/user/v1"
 	"time"
+
+	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/user/v1"
 )
 
 type User struct {

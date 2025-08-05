@@ -3,7 +3,7 @@ package notification_service_test
 import (
 	"context"
 	"encoding/json"
-	"pinstack-notification-service/internal/custom_errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	notification_service "pinstack-notification-service/internal/service/notification"

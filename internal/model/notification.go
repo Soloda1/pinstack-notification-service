@@ -2,8 +2,9 @@ package model
 
 import (
 	"encoding/json"
-	"github.com/soloda1/pinstack-proto-definitions/events"
 	"time"
+
+	"github.com/soloda1/pinstack-proto-definitions/events"
 )
 
 type Notification struct {

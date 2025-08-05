@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"pinstack-notification-service/internal/custom_errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	notification_service "pinstack-notification-service/internal/service/notification"
 )
@@ -68,7 +68,7 @@ func (h *GetUnreadCountHandler) Handle(ctx context.Context, req *pb.GetUnreadCou
 			h.log.Error("Internal service error while getting unread count",
 				slog.Int64("user_id", req.GetUserId()),
 				slog.String("error", err.Error()))
-			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
+			return nil, status.Error(codes.Internal, custom_errors.ErrExternalServiceError.Error())
 		}
 	}
 

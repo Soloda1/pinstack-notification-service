@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"log/slog"
 	"pinstack-notification-service/internal/model"
 
@@ -12,7 +13,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	notification_service "pinstack-notification-service/internal/service/notification"
 )
@@ -89,7 +89,7 @@ func (h *SendNotificationHandler) Handle(ctx context.Context, req *pb.SendNotifi
 				slog.Int64("user_id", req.GetUserId()),
 				slog.String("type", req.GetType()),
 				slog.String("error", err.Error()))
-			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
+			return nil, status.Error(codes.Internal, custom_errors.ErrExternalServiceError.Error())
 		}
 	}
 
