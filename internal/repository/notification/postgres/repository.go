@@ -3,8 +3,8 @@ package notification_repository_postgres
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"log/slog"
-	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	"time"
@@ -241,7 +241,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 
 		if err != nil {
 			r.log.Error("Failed to scan notification row", slog.String("error", err.Error()))
-			return nil, 0, custom_errors.ErrDatabaseScan
+			return nil, 0, custom_errors.ErrDatabaseQuery
 		}
 
 		notifications = append(notifications, &notification)

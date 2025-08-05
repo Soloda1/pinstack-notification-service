@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"pinstack-notification-service/internal/custom_errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	notification_repository_postgres "pinstack-notification-service/internal/repository/notification/postgres"
@@ -561,7 +561,7 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			want:        nil,
 			wantTotal:   0,
 			wantErr:     true,
-			expectedErr: custom_errors.ErrDatabaseScan,
+			expectedErr: custom_errors.ErrDatabaseQuery,
 		},
 	}
 
@@ -580,8 +580,8 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, tt.wantTotal, gotTotal)
-				if tt.expectedErr != nil && tt.expectedErr == custom_errors.ErrDatabaseScan {
-					assert.ErrorIs(t, err, custom_errors.ErrDatabaseScan)
+				if tt.expectedErr != nil && errors.Is(tt.expectedErr, custom_errors.ErrDatabaseQuery) {
+					assert.ErrorIs(t, err, custom_errors.ErrDatabaseQuery)
 				}
 			} else {
 				require.NoError(t, err)

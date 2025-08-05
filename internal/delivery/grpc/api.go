@@ -2,10 +2,11 @@ package notification_grpc
 
 import (
 	"context"
-	"github.com/go-playground/validator/v10"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"pinstack-notification-service/internal/logger"
 	notification_service "pinstack-notification-service/internal/service/notification"
+
+	"github.com/go-playground/validator/v10"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
 )

@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
+	"log/slog"
+	"pinstack-notification-service/internal/logger"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"log/slog"
-	"pinstack-notification-service/internal/logger"
 )
 
 func UnaryLoggerInterceptor(log *logger.Logger) grpc.UnaryServerInterceptor {

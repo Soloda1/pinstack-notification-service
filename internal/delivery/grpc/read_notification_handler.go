@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"log/slog"
 
 	pb "github.com/soloda1/pinstack-proto-definitions/gen/go/pinstack-proto-definitions/notification/v1"
@@ -10,7 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	notification_service "pinstack-notification-service/internal/service/notification"
 )
@@ -69,7 +69,7 @@ func (h *ReadNotificationHandler) Handle(ctx context.Context, req *pb.ReadNotifi
 			h.log.Error("Internal service error while reading notification",
 				slog.Int64("notification_id", req.GetNotificationId()),
 				slog.String("error", err.Error()))
-			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
+			return nil, status.Error(codes.Internal, custom_errors.ErrExternalServiceError.Error())
 		}
 	}
 

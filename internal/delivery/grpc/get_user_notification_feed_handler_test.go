@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"pinstack-notification-service/internal/custom_errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	notification_grpc "pinstack-notification-service/internal/delivery/grpc"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
@@ -135,7 +135,7 @@ func TestGetUserNotificationFeed_InternalError(t *testing.T) {
 	statusErr, ok := status.FromError(err)
 	require.True(t, ok)
 	assert.Equal(t, codes.Internal, statusErr.Code())
-	assert.Contains(t, statusErr.Message(), "internal service error")
+	assert.Contains(t, statusErr.Message(), custom_errors.ErrExternalServiceError.Error())
 
 	mockService.AssertExpectations(t)
 }

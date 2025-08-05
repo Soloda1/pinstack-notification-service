@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"pinstack-notification-service/internal/custom_errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	notification_grpc "pinstack-notification-service/internal/delivery/grpc"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
@@ -125,7 +125,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 			},
 			wantErr:        true,
 			expectedCode:   codes.Internal,
-			expectedErrMsg: "internal service error",
+			expectedErrMsg: custom_errors.ErrExternalServiceError.Error(),
 		},
 	}
 

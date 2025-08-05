@@ -3,6 +3,7 @@ package notification_grpc
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"log/slog"
 	"pinstack-notification-service/internal/model"
 
@@ -11,7 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	notification_service "pinstack-notification-service/internal/service/notification"
 )
@@ -70,7 +70,7 @@ func (h *GetNotificationDetailsHandler) Handle(ctx context.Context, req *pb.GetN
 			h.log.Error("Internal service error while getting notification details",
 				slog.Int64("notification_id", req.GetNotificationId()),
 				slog.String("error", err.Error()))
-			return nil, status.Error(codes.Internal, custom_errors.ErrInternalServiceError.Error())
+			return nil, status.Error(codes.Internal, custom_errors.ErrExternalServiceError.Error())
 		}
 	}
 

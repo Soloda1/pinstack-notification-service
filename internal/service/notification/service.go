@@ -3,9 +3,9 @@ package notification_service
 import (
 	"context"
 	"errors"
+	"github.com/soloda1/pinstack-proto-definitions/custom_errors"
 	"log/slog"
 	user_client "pinstack-notification-service/internal/clients/user"
-	"pinstack-notification-service/internal/custom_errors"
 	"pinstack-notification-service/internal/logger"
 	"pinstack-notification-service/internal/model"
 	notification_repository "pinstack-notification-service/internal/repository/notification"
