@@ -135,7 +135,7 @@ func TestGetUserNotificationFeed_InternalError(t *testing.T) {
 	statusErr, ok := status.FromError(err)
 	require.True(t, ok)
 	assert.Equal(t, codes.Internal, statusErr.Code())
-	assert.Contains(t, statusErr.Message(), "internal service error")
+	assert.Contains(t, statusErr.Message(), custom_errors.ErrExternalServiceError.Error())
 
 	mockService.AssertExpectations(t)
 }

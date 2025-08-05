@@ -125,7 +125,7 @@ func TestSendNotificationHandler_Handle(t *testing.T) {
 			},
 			wantErr:        true,
 			expectedCode:   codes.Internal,
-			expectedErrMsg: "internal service error",
+			expectedErrMsg: custom_errors.ErrExternalServiceError.Error(),
 		},
 	}
 
