@@ -4,9 +4,9 @@ import (
 	"flag"
 	"os"
 
-	"pinstack-notification-service/config"
-	"pinstack-notification-service/internal/logger"
-	"pinstack-notification-service/internal/migrator"
+	"pinstack-notification-service/internal/infrastructure/config"
+	"pinstack-notification-service/internal/infrastructure/logger"
+	"pinstack-notification-service/internal/infrastructure/migrator"
 )
 
 func main() {
