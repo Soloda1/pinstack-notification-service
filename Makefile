@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-integration test-user-integration clean build run docker-build setup-system-tests
+.PHONY: test test-unit test-integration test-user-integration clean build run docker-build setup-system-tests quick-test-local
 
 BINARY_NAME=notification-service
 DOCKER_IMAGE=pinstack-notification-service:latest
@@ -41,7 +41,7 @@ test-unit: check-go-version
 start-notification-infrastructure: setup-system-tests
 	@echo "🚀 Запуск полной инфраструктуры для интеграционных тестов..."
 	cd $(SYSTEM_TESTS_DIR) && \
-	docker compose -f docker-compose.test.yml up -d \
+	NOTIFICATION_SERVICE_CONTEXT=../pinstack-notification-service docker compose -f docker-compose.test.yml up -d \
 		user-db-test \
 		user-migrator-test \
 		user-service-test \
@@ -188,6 +188,22 @@ clean-docker-force:
 # CI локально (имитация GitHub Actions)
 ci-local: test-all
 	@echo "🎉 Локальный CI завершен успешно!"
+
+# Быстрый тест с локальным notification-service
+quick-test-local: setup-system-tests
+	@echo "⚡ Быстрый запуск тестов с локальным notification-service..."
+	cd $(SYSTEM_TESTS_DIR) && \
+	NOTIFICATION_SERVICE_CONTEXT=../pinstack-notification-service docker compose -f docker-compose.test.yml up -d \
+		user-db-test user-migrator-test user-service-test \
+		auth-db-test auth-migrator-test auth-service-test \
+		api-gateway-test notification-db-test notification-migrator-test notification-service-test \
+		kafka-test kafka-topics-init-test
+	@echo "⏳ Ожидание готовности сервисов..."
+	@sleep 30
+	@timeout 120 bash -c 'until docker exec pinstack-kafka-test kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1; do echo "⏳ Ожидание Kafka..."; sleep 5; done'
+	cd $(SYSTEM_TESTS_DIR) && \
+	go test -v -count=1 -timeout=5m ./internal/scenarios/integration/gateway_notification/...
+	$(MAKE) stop-notification-infrastructure
 
 # Быстрый тест (только запуск без пересборки)
 quick-test: start-notification-infrastructure
