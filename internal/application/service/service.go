@@ -15,17 +15,23 @@ type Service struct {
 	notificationRepo ports.NotificationRepository
 	userClient       ports.Client
 	log              ports.Logger
+	metrics          ports.MetricsProvider
 }
 
-func NewNotificationService(log ports.Logger, notificationRepo ports.NotificationRepository, userClient ports.Client) *Service {
+func NewNotificationService(log ports.Logger, notificationRepo ports.NotificationRepository, userClient ports.Client, metrics ports.MetricsProvider) *Service {
 	return &Service{
 		log:              log,
 		notificationRepo: notificationRepo,
 		userClient:       userClient,
+		metrics:          metrics,
 	}
 }
 
-func (s *Service) SaveNotification(ctx context.Context, notification *model.Notification) (int64, error) {
+func (s *Service) SaveNotification(ctx context.Context, notification *model.Notification) (id int64, err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("save_notification", err == nil)
+	}()
+
 	if notification == nil {
 		s.log.Error("Notification is nil")
 		return 0, custom_errors.ErrInvalidInput
@@ -36,7 +42,7 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 		return 0, custom_errors.ErrInvalidInput
 	}
 
-	_, err := s.userClient.GetUser(ctx, notification.UserID)
+	_, err = s.userClient.GetUser(ctx, notification.UserID)
 	if err != nil {
 		s.log.Error("Failed to get user", slog.Int64("user_id", notification.UserID))
 		switch {
@@ -84,7 +90,11 @@ func (s *Service) SaveNotification(ctx context.Context, notification *model.Noti
 	return notificationID, nil
 }
 
-func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (*model.Notification, error) {
+func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (notification *model.Notification, err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("get_notification_details", err == nil)
+	}()
+
 	if id <= 0 {
 		s.log.Error("Invalid notification ID", slog.Int64("id", id))
 		return nil, custom_errors.ErrInvalidInput
@@ -92,7 +102,7 @@ func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (*model.
 
 	s.log.Info("Requesting notification details", slog.Int64("id", id))
 
-	notification, err := s.notificationRepo.GetByID(ctx, id)
+	notification, err = s.notificationRepo.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, custom_errors.ErrNotificationNotFound) {
 			s.log.Debug("Notification not found", slog.Int64("id", id))
@@ -115,7 +125,11 @@ func (s *Service) GetNotificationDetails(ctx context.Context, id int64) (*model.
 	return notification, nil
 }
 
-func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (int, error) {
+func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (count int, err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("get_unread_count", err == nil)
+	}()
+
 	if userID <= 0 {
 		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
 		return 0, custom_errors.ErrInvalidInput
@@ -123,7 +137,7 @@ func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (int, error)
 
 	s.log.Info("Retrieving unread notification count", slog.Int64("user_id", userID))
 
-	count, err := s.notificationRepo.CountUnread(ctx, userID)
+	count, err = s.notificationRepo.CountUnread(ctx, userID)
 	if err != nil {
 		s.log.Error("Failed to retrieve unread notification count",
 			slog.Int64("user_id", userID),
@@ -140,7 +154,11 @@ func (s *Service) GetUnreadCount(ctx context.Context, userID int64) (int, error)
 	return count, nil
 }
 
-func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) ([]*model.Notification, int32, error) {
+func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, limit, page int) (notifications []*model.Notification, totalCount int32, err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("get_notification_feed", err == nil)
+	}()
+
 	if userID <= 0 {
 		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
 		return nil, 0, custom_errors.ErrInvalidInput
@@ -165,7 +183,7 @@ func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, lim
 		slog.Int("offset", offset),
 	)
 
-	notifications, totalCount, err := s.notificationRepo.ListByUser(ctx, userID, limit, offset)
+	notifications, totalCount, err = s.notificationRepo.ListByUser(ctx, userID, limit, offset)
 	if err != nil {
 		s.log.Error("Failed to retrieve notification feed",
 			slog.Int64("user_id", userID),
@@ -186,7 +204,11 @@ func (s *Service) GetUserNotificationFeed(ctx context.Context, userID int64, lim
 	return notifications, totalCount, nil
 }
 
-func (s *Service) ReadNotification(ctx context.Context, id int64) error {
+func (s *Service) ReadNotification(ctx context.Context, id int64) (err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("read_notification", err == nil)
+	}()
+
 	if id <= 0 {
 		s.log.Error("Invalid notification ID", slog.Int64("id", id))
 		return custom_errors.ErrInvalidInput
@@ -194,7 +216,7 @@ func (s *Service) ReadNotification(ctx context.Context, id int64) error {
 
 	s.log.Info("Reading notification", slog.Int64("id", id))
 
-	err := s.notificationRepo.MarkAsRead(ctx, id)
+	err = s.notificationRepo.MarkAsRead(ctx, id)
 	if err != nil {
 		if errors.Is(err, custom_errors.ErrNotificationNotFound) {
 			s.log.Debug("Notification not found", slog.Int64("id", id))
@@ -212,7 +234,11 @@ func (s *Service) ReadNotification(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *Service) ReadAllUserNotifications(ctx context.Context, userID int64) error {
+func (s *Service) ReadAllUserNotifications(ctx context.Context, userID int64) (err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("read_all_notifications", err == nil)
+	}()
+
 	if userID <= 0 {
 		s.log.Error("Invalid user ID", slog.Int64("user_id", userID))
 		return custom_errors.ErrInvalidInput
@@ -220,7 +246,7 @@ func (s *Service) ReadAllUserNotifications(ctx context.Context, userID int64) er
 
 	s.log.Info("Reading all notifications for user", slog.Int64("user_id", userID))
 
-	err := s.notificationRepo.MarkAllAsRead(ctx, userID)
+	err = s.notificationRepo.MarkAllAsRead(ctx, userID)
 	if err != nil {
 		s.log.Error("Failed to mark all notifications as read",
 			slog.Int64("user_id", userID),
@@ -233,7 +259,11 @@ func (s *Service) ReadAllUserNotifications(ctx context.Context, userID int64) er
 	return nil
 }
 
-func (s *Service) RemoveNotification(ctx context.Context, id int64) error {
+func (s *Service) RemoveNotification(ctx context.Context, id int64) (err error) {
+	defer func() {
+		s.metrics.IncrementNotificationOperations("remove_notification", err == nil)
+	}()
+
 	if id <= 0 {
 		s.log.Error("Invalid notification ID", slog.Int64("id", id))
 		return custom_errors.ErrInvalidInput
@@ -241,7 +271,7 @@ func (s *Service) RemoveNotification(ctx context.Context, id int64) error {
 
 	s.log.Info("Removing notification", slog.Int64("id", id))
 
-	err := s.notificationRepo.Delete(ctx, id)
+	err = s.notificationRepo.Delete(ctx, id)
 	if err != nil {
 		if errors.Is(err, custom_errors.ErrNotificationNotFound) {
 			s.log.Debug("Notification not found", slog.Int64("id", id))

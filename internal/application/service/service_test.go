@@ -6,6 +6,7 @@ import (
 	notification_service "pinstack-notification-service/internal/application/service"
 	model "pinstack-notification-service/internal/domain/models"
 	"pinstack-notification-service/internal/infrastructure/logger"
+	"pinstack-notification-service/internal/infrastructure/outbound/metrics/prometheus"
 	"pinstack-notification-service/mocks"
 	"testing"
 	"time"
@@ -110,11 +111,12 @@ func TestService_SendNotification(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 			tt.userClientSetup(mockUserClient)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			id, err := service.SaveNotification(context.Background(), tt.notification)
 
 			if tt.wantErr {
@@ -196,10 +198,11 @@ func TestService_GetNotificationDetails(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			got, err := service.GetNotificationDetails(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -268,10 +271,11 @@ func TestService_GetUnreadCount(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			got, err := service.GetUnreadCount(context.Background(), tt.userID)
 
 			if tt.wantErr {
@@ -406,10 +410,11 @@ func TestService_GetUserNotificationFeed(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			got, gotTotal, err := service.GetUserNotificationFeed(context.Background(), tt.userID, tt.limit, tt.page)
 
 			if tt.wantErr {
@@ -475,10 +480,11 @@ func TestService_ReadNotification(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			err := service.ReadNotification(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -532,10 +538,11 @@ func TestService_ReadAllUserNotifications(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			err := service.ReadAllUserNotifications(context.Background(), tt.userID)
 
 			if tt.wantErr {
@@ -598,10 +605,11 @@ func TestService_RemoveNotification(t *testing.T) {
 			mockRepo := mocks.NewNotificationRepository(t)
 			mockUserClient := mocks.NewClient(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			tt.mockSetup(mockRepo)
 
-			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient)
+			service := notification_service.NewNotificationService(log, mockRepo, mockUserClient, metrics)
 			err := service.RemoveNotification(context.Background(), tt.id)
 
 			if tt.wantErr {
