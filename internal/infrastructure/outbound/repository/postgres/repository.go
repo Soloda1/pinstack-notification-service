@@ -17,15 +17,22 @@ import (
 )
 
 type NotificationRepository struct {
-	log ports.Logger
-	db  PgDB
+	log     ports.Logger
+	db      PgDB
+	metrics ports.MetricsProvider
 }
 
-func NewNotificationRepository(db PgDB, log ports.Logger) *NotificationRepository {
-	return &NotificationRepository{db: db, log: log}
+func NewNotificationRepository(db PgDB, log ports.Logger, metrics ports.MetricsProvider) *NotificationRepository {
+	return &NotificationRepository{db: db, log: log, metrics: metrics}
 }
 
-func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) (int64, error) {
+func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notification) (id int64, err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("create_notification", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("create_notification", time.Since(start))
+	}()
+
 	createdAt := pgtype.Timestamptz{Time: time.Now(), Valid: true}
 	if !notif.CreatedAt.IsZero() {
 		createdAt.Time = notif.CreatedAt
@@ -62,7 +69,7 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 
 	var createdNotification model.Notification
 	var typeStr string
-	err := r.db.QueryRow(ctx, query, args).Scan(
+	err = r.db.QueryRow(ctx, query, args).Scan(
 		&createdNotification.ID,
 		&createdNotification.UserID,
 		&typeStr,
@@ -101,7 +108,13 @@ func (r *NotificationRepository) Create(ctx context.Context, notif *model.Notifi
 	return createdNotification.ID, nil
 }
 
-func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.Notification, error) {
+func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (notification *model.Notification, err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("get_notification_by_id", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("get_notification_by_id", time.Since(start))
+	}()
+
 	query := `
 		SELECT id, user_id, type, is_read, created_at, payload 
 		FROM notifications 
@@ -114,17 +127,17 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 
 	r.log.Debug("Getting notification by ID", slog.Int64("id", id))
 
-	var notification model.Notification
+	var notificationData model.Notification
 	var typeStr string
-	err := r.db.QueryRow(ctx, query, args).Scan(
-		&notification.ID,
-		&notification.UserID,
+	err = r.db.QueryRow(ctx, query, args).Scan(
+		&notificationData.ID,
+		&notificationData.UserID,
 		&typeStr,
-		&notification.IsRead,
-		&notification.CreatedAt,
-		&notification.Payload,
+		&notificationData.IsRead,
+		&notificationData.CreatedAt,
+		&notificationData.Payload,
 	)
-	notification.Type = events.EventType(typeStr)
+	notificationData.Type = events.EventType(typeStr)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -149,14 +162,20 @@ func (r *NotificationRepository) GetByID(ctx context.Context, id int64) (*model.
 	}
 
 	r.log.Debug("Notification retrieved successfully",
-		slog.Int64("id", notification.ID),
-		slog.Int64("user_id", notification.UserID),
+		slog.Int64("id", notificationData.ID),
+		slog.Int64("user_id", notificationData.UserID),
 	)
 
-	return &notification, nil
+	return &notificationData, nil
 }
 
-func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) ([]*model.Notification, int32, error) {
+func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, limit int, offset int) (notifications []*model.Notification, totalCount int32, err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("list_notifications_by_user", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("list_notifications_by_user", time.Since(start))
+	}()
+
 	countQuery := `
 		SELECT COUNT(*)
 		FROM notifications 
@@ -167,8 +186,8 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 		"user_id": userID,
 	}
 
-	var totalCount int32
-	err := r.db.QueryRow(ctx, countQuery, countArgs).Scan(&totalCount)
+	var totalCountVar int32
+	err = r.db.QueryRow(ctx, countQuery, countArgs).Scan(&totalCountVar)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -204,7 +223,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 		slog.Int64("user_id", userID),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset),
-		slog.Int("total_count", int(totalCount)),
+		slog.Int("total_count", int(totalCountVar)),
 	)
 
 	rows, err := r.db.Query(ctx, query, args)
@@ -226,7 +245,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 	}
 	defer rows.Close()
 
-	notifications := make([]*model.Notification, 0)
+	notificationsList := make([]*model.Notification, 0)
 	for rows.Next() {
 		var notification model.Notification
 		var typeStr string
@@ -245,7 +264,7 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 			return nil, 0, custom_errors.ErrDatabaseQuery
 		}
 
-		notifications = append(notifications, &notification)
+		notificationsList = append(notificationsList, &notification)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -255,14 +274,20 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID int64, l
 
 	r.log.Debug("Retrieved notifications successfully",
 		slog.Int64("user_id", userID),
-		slog.Int("count", len(notifications)),
-		slog.Int("total_count", int(totalCount)),
+		slog.Int("count", len(notificationsList)),
+		slog.Int("total_count", int(totalCountVar)),
 	)
 
-	return notifications, totalCount, nil
+	return notificationsList, totalCountVar, nil
 }
 
-func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error {
+func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) (err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("mark_notification_as_read", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("mark_notification_as_read", time.Since(start))
+	}()
+
 	query := `
 		UPDATE notifications
 		SET is_read = true
@@ -296,14 +321,21 @@ func (r *NotificationRepository) MarkAsRead(ctx context.Context, id int64) error
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		r.log.Debug("Notification not found", slog.Int64("id", id))
-		return custom_errors.ErrNotificationNotFound
+		err = custom_errors.ErrNotificationNotFound
+		return
 	}
 
 	r.log.Debug("Notification marked as read successfully", slog.Int64("id", id))
-	return nil
+	return
 }
 
-func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID int64) error {
+func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID int64) (err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("mark_all_notifications_as_read", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("mark_all_notifications_as_read", time.Since(start))
+	}()
+
 	query := `
 		UPDATE notifications
 		SET is_read = true
@@ -343,7 +375,13 @@ func (r *NotificationRepository) MarkAllAsRead(ctx context.Context, userID int64
 	return nil
 }
 
-func (r *NotificationRepository) Delete(ctx context.Context, id int64) error {
+func (r *NotificationRepository) Delete(ctx context.Context, id int64) (err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("delete_notification", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("delete_notification", time.Since(start))
+	}()
+
 	query := `
 		DELETE FROM notifications
 		WHERE id = @id
@@ -376,14 +414,21 @@ func (r *NotificationRepository) Delete(ctx context.Context, id int64) error {
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		r.log.Debug("Notification not found", slog.Int64("id", id))
-		return custom_errors.ErrNotificationNotFound
+		err = custom_errors.ErrNotificationNotFound
+		return
 	}
 
 	r.log.Debug("Notification deleted successfully", slog.Int64("id", id))
 	return nil
 }
 
-func (r *NotificationRepository) CountUnread(ctx context.Context, userID int64) (int, error) {
+func (r *NotificationRepository) CountUnread(ctx context.Context, userID int64) (count int, err error) {
+	start := time.Now()
+	defer func() {
+		r.metrics.IncrementDatabaseQueries("count_unread_notifications", err == nil)
+		r.metrics.RecordDatabaseQueryDuration("count_unread_notifications", time.Since(start))
+	}()
+
 	query := `
 		SELECT COUNT(*)
 		FROM notifications
@@ -396,8 +441,8 @@ func (r *NotificationRepository) CountUnread(ctx context.Context, userID int64) 
 
 	r.log.Debug("Counting unread notifications for user", slog.Int64("user_id", userID))
 
-	var count int
-	err := r.db.QueryRow(ctx, query, args).Scan(&count)
+	var countVar int
+	err = r.db.QueryRow(ctx, query, args).Scan(&countVar)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -417,8 +462,8 @@ func (r *NotificationRepository) CountUnread(ctx context.Context, userID int64) 
 
 	r.log.Debug("Counted unread notifications successfully",
 		slog.Int64("user_id", userID),
-		slog.Int("count", count),
+		slog.Int("count", countVar),
 	)
 
-	return count, nil
+	return countVar, nil
 }

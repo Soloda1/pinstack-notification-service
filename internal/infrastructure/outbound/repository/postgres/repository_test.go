@@ -6,6 +6,7 @@ import (
 	"errors"
 	model "pinstack-notification-service/internal/domain/models"
 	"pinstack-notification-service/internal/infrastructure/logger"
+	"pinstack-notification-service/internal/infrastructure/outbound/metrics/prometheus"
 	notification_repository_postgres "pinstack-notification-service/internal/infrastructure/outbound/repository/postgres"
 	"pinstack-notification-service/mocks"
 	"strings"
@@ -192,12 +193,13 @@ func TestNotificationRepository_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			id, err := repo.Create(context.Background(), &tt.notification)
 
 			if tt.wantErr {
@@ -350,12 +352,13 @@ func TestNotificationRepository_GetByID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			got, err := repo.GetByID(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -570,12 +573,13 @@ func TestNotificationRepository_ListByUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			got, gotTotal, err := repo.ListByUser(context.Background(), tt.userID, tt.limit, tt.offset)
 
 			if tt.wantErr {
@@ -667,12 +671,13 @@ func TestNotificationRepository_MarkAsRead(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			err := repo.MarkAsRead(context.Background(), tt.id)
 
 			if tt.wantErr {
@@ -757,12 +762,13 @@ func TestNotificationRepository_MarkAllAsRead(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			err := repo.MarkAllAsRead(context.Background(), tt.userID)
 
 			if tt.wantErr {
@@ -842,12 +848,13 @@ func TestNotificationRepository_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := mocks.NewPgDB(t)
 			log := logger.New("dev")
+			metrics := prometheus.NewPrometheusMetricsProvider()
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockDB)
 			}
 
-			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log)
+			repo := notification_repository_postgres.NewNotificationRepository(mockDB, log, metrics)
 			err := repo.Delete(context.Background(), tt.id)
 
 			if tt.wantErr {
