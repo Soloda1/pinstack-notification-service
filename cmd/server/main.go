@@ -2,24 +2,23 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	notification_service "pinstack-notification-service/internal/application/service"
 	"pinstack-notification-service/internal/infrastructure/config"
 	notification_grpc "pinstack-notification-service/internal/infrastructure/inbound/grpc"
 	"pinstack-notification-service/internal/infrastructure/inbound/kafka/consumer"
+	metrics_server "pinstack-notification-service/internal/infrastructure/inbound/metrics"
 	"pinstack-notification-service/internal/infrastructure/logger"
 	user_client "pinstack-notification-service/internal/infrastructure/outbound/client/user"
+	prometheus_metrics "pinstack-notification-service/internal/infrastructure/outbound/metrics/prometheus"
 	repository_postgres "pinstack-notification-service/internal/infrastructure/outbound/repository/postgres"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -65,11 +64,15 @@ func main() {
 
 	userClient := user_client.NewUserClient(userServiceConn, log)
 
-	notificationRepo := repository_postgres.NewNotificationRepository(pool, log)
+	metricsProvider := prometheus_metrics.NewPrometheusMetricsProvider()
 
-	notificationService := notification_service.NewNotificationService(log, notificationRepo, userClient)
+	metricsProvider.SetServiceHealth(true)
 
-	kafkaConsumer, err := consumer.NewNotificationConsumer(cfg.Kafka, log, notificationService)
+	notificationRepo := repository_postgres.NewNotificationRepository(pool, log, metricsProvider)
+
+	notificationService := notification_service.NewNotificationService(log, notificationRepo, userClient, metricsProvider)
+
+	kafkaConsumer, err := consumer.NewNotificationConsumer(cfg.Kafka, log, notificationService, metricsProvider)
 	if err != nil {
 		log.Error("Failed to initialize Kafka consumer", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -78,11 +81,7 @@ func main() {
 	notificationGRPCApi := notification_grpc.NewNotificationGRPCService(notificationService, log)
 	grpcServer := notification_grpc.NewServer(notificationGRPCApi, cfg.GrpcServer.Address, cfg.GrpcServer.Port, log)
 
-	metricsAddr := fmt.Sprintf("%s:%d", cfg.Prometheus.Address, cfg.Prometheus.Port)
-	metricsServer := &http.Server{
-		Addr:    metricsAddr,
-		Handler: nil,
-	}
+	metricsServer := metrics_server.NewMetricsServer(cfg.Prometheus.Address, cfg.Prometheus.Port, log)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
@@ -100,18 +99,17 @@ func main() {
 		done <- true
 	}()
 
-	http.Handle("/metrics", promhttp.Handler())
-
 	go func() {
-		log.Info("Starting Prometheus metrics server", slog.String("address", metricsAddr))
-		if err := metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("Prometheus metrics server error", slog.String("error", err.Error()))
+		if err := metricsServer.Run(); err != nil {
+			log.Error("Metrics server error", slog.String("error", err.Error()))
 		}
 		metricsDone <- true
 	}()
 
 	<-quit
 	log.Info("Shutting down services...")
+
+	metricsProvider.SetServiceHealth(false)
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
