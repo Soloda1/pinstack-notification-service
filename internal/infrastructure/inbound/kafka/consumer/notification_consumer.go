@@ -22,9 +22,10 @@ type NotificationConsumer struct {
 	log                 ports.Logger
 	consumer            *kafka.Consumer
 	notificationService notification_service.NotificationService
+	metrics             ports.MetricsProvider
 }
 
-func NewNotificationConsumer(cfg config.KafkaConfig, log ports.Logger, notificationSvc notification_service.NotificationService) (*NotificationConsumer, error) {
+func NewNotificationConsumer(cfg config.KafkaConfig, log ports.Logger, notificationSvc notification_service.NotificationService, metrics ports.MetricsProvider) (*NotificationConsumer, error) {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":       cfg.Brokers,
 		"group.id":                cfg.ConsumerGroupID,
@@ -45,6 +46,7 @@ func NewNotificationConsumer(cfg config.KafkaConfig, log ports.Logger, notificat
 		log:                 log,
 		consumer:            c,
 		notificationService: notificationSvc,
+		metrics:             metrics,
 	}, nil
 }
 
@@ -114,7 +116,17 @@ func (c *NotificationConsumer) Start(ctx context.Context) {
 	}()
 }
 
-func (c *NotificationConsumer) processMessage(ctx context.Context, msg *kafka.Message) error {
+func (c *NotificationConsumer) processMessage(ctx context.Context, msg *kafka.Message) (err error) {
+	start := time.Now()
+	topic := "unknown"
+	if msg.TopicPartition.Topic != nil {
+		topic = *msg.TopicPartition.Topic
+	}
+	defer func() {
+		c.metrics.IncrementKafkaMessages(topic, "consume", err == nil)
+		c.metrics.RecordKafkaMessageDuration(topic, "consume", time.Since(start))
+	}()
+
 	if msg == nil || msg.Value == nil {
 		return custom_errors.ErrInvalidInput
 	}
@@ -140,7 +152,11 @@ func (c *NotificationConsumer) processMessage(ctx context.Context, msg *kafka.Me
 	}
 }
 
-func (c *NotificationConsumer) handleFollowCreated(ctx context.Context, payload json.RawMessage) error {
+func (c *NotificationConsumer) handleFollowCreated(ctx context.Context, payload json.RawMessage) (err error) {
+	defer func() {
+		c.metrics.IncrementNotificationOperations("process_follow_event", err == nil)
+	}()
+
 	var followEvent events.FollowCreatedPayload
 	if err := json.Unmarshal(payload, &followEvent); err != nil {
 		c.log.Error("Failed to unmarshal follow created event",
@@ -178,6 +194,7 @@ func (c *NotificationConsumer) handleFollowCreated(ctx context.Context, payload 
 	c.log.Info("Notification saved successfully",
 		slog.Int64("notification_id", notificationID),
 		slog.Int64("user_id", notification.UserID))
+
 	return nil
 }
 
