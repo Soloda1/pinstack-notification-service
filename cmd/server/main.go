@@ -79,7 +79,7 @@ func main() {
 	}
 
 	notificationGRPCApi := notification_grpc.NewNotificationGRPCService(notificationService, log)
-	grpcServer := notification_grpc.NewServer(notificationGRPCApi, cfg.GrpcServer.Address, cfg.GrpcServer.Port, log)
+	grpcServer := notification_grpc.NewServer(notificationGRPCApi, cfg.GrpcServer.Address, cfg.GrpcServer.Port, log, metricsProvider)
 
 	metricsServer := metrics_server.NewMetricsServer(cfg.Prometheus.Address, cfg.Prometheus.Port, log)
 
